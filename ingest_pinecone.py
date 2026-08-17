@@ -6,7 +6,7 @@ from sentence_transformers import SentenceTransformer
 from pinecone import Pinecone, ServerlessSpec
 
 # 1. إعداد مفتاح Pinecone والاتصال
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "pcsk_JRHKF_4eVpbyHrnkHe2xy9sh48UYXnMjrEdQxUHR2Ka6modGzkZfpjoyzV7ssBjMaWzV6")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
 INDEX_NAME = "imci-clinical-guidelines"

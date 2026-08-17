@@ -10,7 +10,7 @@ chroma_client = chromadb.PersistentClient(path="./chroma_db")
 chroma_collection = chroma_client.get_or_create_collection(name="imci_clinical_guidelines")
 
 # 2. إعداد Pinecone (Cloud Serverless DB)
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "pcsk_JRHKF_4eVpbyHrnkHe2xy9sh48UYXnMjrEdQxUHR2Ka6modGzkZfpjoyzV7ssBjMaWzV6")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 pc = Pinecone(api_key=PINECONE_API_KEY)
 pinecone_index = pc.Index("imci-clinical-guidelines")
 

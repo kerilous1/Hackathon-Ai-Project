@@ -6,9 +6,8 @@ from google.genai import types
 from pinecone import Pinecone
 from sentence_transformers import SentenceTransformer
 
-# 1. إعداد مفاتيح الـ APIs
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6Lm0MpBXDCzIUT1cuOELwTWL52DJh1CW-ARPujPRU74Rg")
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "YOUR_PINECONE_API_KEY_HERE")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 
 ai_client = genai.Client(api_key=GEMINI_API_KEY)
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
