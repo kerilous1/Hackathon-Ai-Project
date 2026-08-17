@@ -1,81 +1,156 @@
 import os
 import re
 import chromadb
-from langchain_text_splitters import MarkdownHeaderTextSplitter
+from google import genai
+from google.genai import types
 
-file_path = "imci_handbook.md"
+# 1. إعداد مفتاح API والعميل
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6Lm0MpBXDCzIUT1cuOELwTWL52DJh1CW-ARPujPRU74Rg")
+ai_client = genai.Client(api_key=GEMINI_API_KEY)
 
-if not os.path.exists(file_path):
-    print(f"Error: '{file_path}' not found.")
-    exit(1)
-
-print("📖 Reading IMCI handbook markdown file...")
-with open(file_path, "r", encoding="utf-8") as f:
-    markdown_content = f.read()
-
-total_len = len(markdown_content)
-ESTIMATED_PAGE_LEN = max(1, total_len // 173)
-
-headers_to_split_on = [
-    ("#", "Header 1"),
-    ("##", "Header 2"),
-    ("###", "Header 3"),
+# قائمة الموديلات المتاحة بالترتيب لضمان التبديل التلقائي عند الضغط (503/429 Fallback)
+FALLBACK_MODELS = [
+    "gemini-3.5-flash",
+    "gemini-3.7-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-latest"
 ]
 
-markdown_splitter = MarkdownHeaderTextSplitter(
-    headers_to_split_on=headers_to_split_on,
-    strip_headers=False
-)
+SYSTEM_INSTRUCTION = """
+You are an expert WHO IMCI (Integrated Management of Childhood Illness) Clinical Decision Support Assistant.
+Your job is to assist healthcare workers by providing STRICTLY GROUNDED clinical classifications, treatments, and assessment steps based ONLY on the provided IMCI context.
 
-splits = markdown_splitter.split_text(markdown_content)
-print(f"Total raw sections extracted: {len(splits)}")
+Rules:
+1. Grounding: Rely strictly on the retrieved text. Do NOT hallucinate or provide medical advice outside the given context.
+2. Triage Classification: Clearly state the IMCI color-coded triage level if applicable:
+   - 🔴 RED: Urgent pre-referral treatment and immediate hospital referral.
+   - 🟡 YELLOW: Specific medical treatment at clinic and home care advice.
+   - 🟢 GREEN: Supportive home care, feeding, and fluids.
+3. Structure your response clearly:
+   - 📋 Clinical Classification & Severity
+   - 🚨 Immediate Clinical Actions / Pre-referral Treatments
+   - 💊 Specific Dosages / Home Care Instructions (if present in context)
+   - 📖 Citations: Reference exact Page numbers and Section titles from the context.
+4. Language Requirement: 
+   - If the user asks in Arabic, you MUST formulate your entire response in clear, professional Arabic, keeping medical terms in English where appropriate.
+   - If the user asks in English, reply in English.
+"""
 
+# 2. الاتصال بقاعدة بيانات ChromaDB المحلية
 client = chromadb.PersistentClient(path="./chroma_db")
+collection = client.get_or_create_collection(name="imci_clinical_guidelines")
 
-try:
-    client.delete_collection(name="imci_clinical_guidelines")
-except Exception:
-    pass
+DISTANCE_THRESHOLD = 1.15
 
-collection = client.create_collection(name="imci_clinical_guidelines")
 
-print("⚙️ Filtering out empty cover headers and indexing clinical content...")
+def execute_genai_call(prompt_text: str, is_translation: bool = False) -> str:
+    """تنفيذ استدعاء الذكاء الاصطناعي مع التبديل التلقائي بين الموديلات في حال حدوث 503 أو ضغط"""
+    last_err = ""
+    for model_name in FALLBACK_MODELS:
+        try:
+            cfg = None
+            if not is_translation:
+                cfg = types.GenerateContentConfig(
+                    system_instruction=SYSTEM_INSTRUCTION,
+                    temperature=0.2,
+                )
+            
+            response = ai_client.models.generate_content(
+                model=model_name,
+                contents=prompt_text,
+                config=cfg
+            )
+            return response.text
+        except Exception as e:
+            last_err = str(e)
+            if "503" in last_err or "429" in last_err or "UNAVAILABLE" in last_err:
+                print(f"⚠️ ضغط على موديل ({model_name})، جاري التبديل للموديل التالي...")
+                continue
+            else:
+                return f"❌ خطأ تقني: {last_err}"
+                
+    return f"❌ تعذر الاتصال بجميع الموديلات بسبب الضغط المؤقت: {last_err}"
 
-current_char_count = 0
-valid_chunks = 0
 
-for i, chunk in enumerate(splits):
-    content = chunk.page_content.strip()
-    chunk_len = len(content)
+def prepare_search_query(user_query: str) -> str:
+    """تحويل الاستفسار العربي إلى مصطلحات طبية إنجليزية للبحث داخل قاعدة البيانات"""
+    if re.search(r'[\u0600-\u06FF]', user_query):
+        print("🌐 جاري تحويل المصطلحات الطبية للبحث الدلالي بالإنجليزية...")
+        prompt = f"Translate this clinical scenario into concise medical English search terms: '{user_query}'. Return ONLY the translation without quotes."
+        search_query = execute_genai_call(prompt, is_translation=True).strip().replace('"', '')
+        print(f"🔄 Search Query (EN): \"{search_query}\"")
+        return search_query
+    return user_query
+
+
+def ask_pedi_guide(doctor_query: str):
+    search_query = prepare_search_query(doctor_query)
     
-    # حساب رقم الصفحة
-    estimated_page = min(173, max(1, (current_char_count // ESTIMATED_PAGE_LEN) + 1))
-    current_char_count += chunk_len
-    
-    # 🌟 استبعاد أغلفة الفصول والعناوين المجرّدة التي لا تحتوي على محتوى سريري مفيد
-    # أي مقطع أقصر من 150 حرف أو عبارة عن مجرد "Part III" يتم تخطيه لتركيز البحث على الجداول
-    if chunk_len < 150 and any(h in content.lower() for h in ["# part", "chapter", "contents"]):
-        continue
+    print(f"\n🔍 Searching IMCI Handbook for: \"{search_query}\"...")
 
-    section_title = chunk.metadata.get("Header 2", chunk.metadata.get("Header 1", "General Clinical Guidelines"))
-    h3_title = chunk.metadata.get("Header 3", "")
-    full_context_title = f"{section_title} - {h3_title}" if h3_title else section_title
-    
-    # حشو السياق الكامل
-    context_enhanced_text = f"CLINICAL SECTION: {full_context_title}\nCONTENT:\n{content}"
-
-    metadata = {
-        "document_name": "WHO IMCI Handbook 9241546441",
-        "section_title": str(full_context_title),
-        "source": "WHO-UNICEF IMCI Guidelines",
-        "page_number": int(estimated_page)
-    }
-
-    collection.add(
-        documents=[context_enhanced_text],
-        metadatas=[metadata],
-        ids=[f"imci-chunk-{i}"]
+    results = collection.query(
+        query_texts=[search_query],
+        n_results=3,
+        include=["documents", "metadatas", "distances"]
     )
-    valid_chunks += 1
 
-print(f"✅ Success! Indexed {valid_chunks} high-density clinical chunks with page mapping.")
+    if not results or not results["documents"] or not results["documents"][0]:
+        return "⚠️ لم يتم العثور على أي بيانات سريرية مطابقة في قاعدة البيانات."
+
+    best_dist = results['distances'][0][0]
+
+    # مصد الأمان
+    if best_dist > DISTANCE_THRESHOLD:
+        return (
+            f"🛡️ [Safeguard Rejection / Out of Scope]\n"
+            f"عذراً، هذا الاستفسار خارج نطاق دليل منظمة الصحة العالمية لطب الأطفال (WHO IMCI Guidelines).\n"
+            f"هذا النظام مخصص فقط لحالات الأطفال وحديثي الولادة (Distance: {best_dist:.4f} > {DISTANCE_THRESHOLD})."
+        )
+
+    # تجهيز السياق الطبي وتنسيقه مع أرقام الصفحات
+    context_blocks = []
+    for i, (doc, meta) in enumerate(zip(results["documents"][0], results["metadatas"][0])):
+        page = meta.get("page_number", "N/A")
+        section = meta.get("section_title", "General")
+        context_blocks.append(
+            f"--- EVIDENCE CHUNK [{i+1}] (Page: {page}, Section: {section}) ---\n{doc}\n"
+        )
+
+    full_context = "\n".join(context_blocks)
+
+    prompt = f"""
+Clinical Question from Doctor:
+"{doctor_query}"
+
+Retrieved Official IMCI Evidence Context:
+{full_context}
+
+Provide a structured, accurate clinical response with citations based solely on the evidence above. Respond in the same language as the Doctor's Question.
+"""
+
+    print("🤖 Generating grounded clinical decision support...\n")
+    return execute_genai_call(prompt, is_translation=False)
+
+
+def main():
+    print("=" * 66)
+    print("🩺 PEDI-GUIDE AI - CLINICAL ASSISTANT (END-TO-END RAG)")
+    print("==================================================================")
+    
+    while True:
+        query = input("\n📝 أدخل الحالة السريرية (أو 'exit' للخروج): ").strip()
+        if query.lower() in ["exit", "quit", "q"]:
+            print("إغلاق المساعد الطبي. بالتوفيق!")
+            break
+        
+        if query:
+            answer = ask_pedi_guide(query)
+            print("\n" + "=" * 66)
+            print("📋 CLINICAL RESPONSE:")
+            print("=" * 66)
+            print(answer)
+            print("=" * 66)
+
+
+if __name__ == "__main__":
+    main()
