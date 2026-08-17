@@ -1,9 +1,13 @@
 import os
 import time
+from dotenv import load_dotenv
 import chromadb
 from pinecone import Pinecone
 from sentence_transformers import SentenceTransformer
 from tabulate import tabulate
+
+# تحميل المفاتيح من ملف .env
+load_dotenv()
 
 # 1. إعداد ChromaDB (Local Embedded DB)
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
@@ -76,7 +80,6 @@ def run_chroma_query(query_text: str):
     metas = results["metadatas"][0]
     dists = results["distances"][0]
 
-    # تحويل مسافة L2 Squared إلى Cosine Similarity ونسبة مئوية
     cosine_sims = [1.0 - (d / 2.0) for d in dists]
     match_pcts = [max(0.0, c * 100.0) for c in cosine_sims]
 
@@ -97,7 +100,6 @@ def run_chroma_query(query_text: str):
 
 def run_pinecone_query(query_text: str):
     start_time = time.perf_counter()
-    # توليد التضمين + الاستعلام السحابي
     q_vec = embed_model.encode(query_text).tolist()
     results = pinecone_index.query(vector=q_vec, top_k=3, include_metadata=True)
     latency_ms = (time.perf_counter() - start_time) * 1000
@@ -145,7 +147,7 @@ def main_benchmark():
         print(f"🔍 Query: \"{query}\"")
         print(f"{'━' * 98}")
 
-        # 1. تشغيل ChromaDB
+        # 1. ChromaDB
         c_results, c_best, c_avg, c_lat = run_chroma_query(query)
         c_status = "✅ MATCHED" if c_best >= MIN_SIMILARITY_THRESHOLD else "🛡️ REJECTED"
         c_top_page = c_results[0]["page"] if c_results else "N/A"
@@ -162,7 +164,7 @@ def main_benchmark():
         else:
             print("   ⛔ مستبعد بمصد الأمان لخروجه عن نطاق طب الأطفال.")
 
-        # 2. تشغيل Pinecone
+        # 2. Pinecone
         p_results, p_best, p_avg, p_lat = run_pinecone_query(query)
         p_status = "✅ MATCHED" if p_best >= MIN_SIMILARITY_THRESHOLD else "🛡️ REJECTED"
         p_top_page = p_results[0]["page"] if p_results else "N/A"
@@ -179,7 +181,6 @@ def main_benchmark():
         else:
             print("   ⛔ مستبعد بمصد الأمان لخروجه عن نطاق طب الأطفال.")
 
-        # مقارنة سريعة للحالة الحالية
         speed_diff = abs(c_lat - p_lat)
         faster = "ChromaDB" if c_lat < p_lat else "Pinecone"
         page_agree = "✅ متطابق" if c_top_page == p_top_page else "⚠️ مختلف"
@@ -190,7 +191,6 @@ def main_benchmark():
         if p_best >= MIN_SIMILARITY_THRESHOLD:
             pinecone_valid_acc.append(p_avg)
 
-        # إضافة البيانات للجدول النهائي
         summary_table.append([
             tc_id,
             case_name[:24],
@@ -203,7 +203,6 @@ def main_benchmark():
             faster
         ])
 
-    # طباعة الجدول النهائي الشامل
     print("\n" + "=" * 105)
     print("📋 BENCHMARK FINAL SUMMARY: HEAD-TO-HEAD COMPARISON")
     print("=" * 105)
@@ -219,7 +218,6 @@ def main_benchmark():
         for row in summary_table:
             print(" | ".join(str(x) for x in row))
 
-    # طباعة الإحصائيات الختامية
     avg_c_lat = sum(chroma_total_lat) / len(chroma_total_lat)
     avg_p_lat = sum(pinecone_total_lat) / len(pinecone_total_lat)
     avg_c_acc = sum(chroma_valid_acc) / len(chroma_valid_acc) if chroma_valid_acc else 0

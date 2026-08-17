@@ -1,10 +1,14 @@
 import os
 import re
+from dotenv import load_dotenv
 import chromadb
-from google import genai
-from google.genai import types
 from pinecone import Pinecone
 from sentence_transformers import SentenceTransformer
+from google import genai
+from google.genai import types
+
+# تحميل المتغيرات من .env
+load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -12,11 +16,11 @@ PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 ai_client = genai.Client(api_key=GEMINI_API_KEY)
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
 
-# إعداد ChromaDB (Local)
+# إعداد ChromaDB
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
 chroma_collection = chroma_client.get_or_create_collection(name="imci_clinical_guidelines")
 
-# إعداد Pinecone (Cloud)
+# إعداد Pinecone
 pc = Pinecone(api_key=PINECONE_API_KEY)
 pinecone_index = pc.Index("imci-clinical-guidelines")
 
