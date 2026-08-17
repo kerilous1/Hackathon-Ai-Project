@@ -19,7 +19,7 @@ pc = Pinecone(api_key=PINECONE_API_KEY)
 pinecone_index = pc.Index("imci-clinical-guidelines")
 
 # 3. نموذج التضمين المشترك
-print("🧠 تحميل نموذج التضمين (all-MiniLM-L6-v2)...")
+print("🧠 Loading Embedding Model (all-MiniLM-L6-v2)...")
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 MIN_SIMILARITY_THRESHOLD = 43.5  # حد الأمان لنسبة التطابق
@@ -27,33 +27,33 @@ MIN_SIMILARITY_THRESHOLD = 43.5  # حد الأمان لنسبة التطابق
 test_queries = [
     {
         "id": "TC-01",
-        "case": "General Danger Signs (علامات الخطورة العامة)",
+        "case": "General Danger Signs",
         "query": "child general danger signs not able to drink vomiting everything convulsions lethargic"
     },
     {
         "id": "TC-02",
-        "case": "Severe Pneumonia (التهاب رئوي وصعوبة تنفس)",
+        "case": "Severe Pneumonia",
         "query": "child with cough fast breathing and chest indrawing stridor"
     },
     {
         "id": "TC-03",
-        "case": "Neonatal Jaundice (الصفراء وحديثي الولادة)",
+        "case": "Neonatal Jaundice",
         "query": "young infant with jaundice yellow skin palms and soles"
     },
     {
         "id": "TC-04",
-        "case": "Out of Scope (سؤال خارج التخصص - أمراض قلب)",
+        "case": "Out of Scope (Cardiology)",
         "query": "adult coronary artery disease and nitroglycerin dosage"
     },
     {
         "id": "TC-05",
-        "case": "Jaundice Symptoms (أعراض الصفراء العامة)",
+        "case": "Jaundice Symptoms",
         "query": "symptoms of jaundice"
     }
 ]
 
 
-def clean_text_snippet(raw_text: str, max_chars: int = 180) -> str:
+def clean_text_snippet(raw_text: str, max_chars: int = 160) -> str:
     cleaned = (
         raw_text.replace("CLINICAL SECTION:", "")
         .replace("CONTENT:", "")
@@ -147,70 +147,75 @@ def main_benchmark():
         print(f"🔍 Query: \"{query}\"")
         print(f"{'━' * 98}")
 
-        # 1. ChromaDB
+        # 1. تشغيل ChromaDB
         c_results, c_best, c_avg, c_lat = run_chroma_query(query)
-        c_status = "✅ MATCHED" if c_best >= MIN_SIMILARITY_THRESHOLD else "🛡️ REJECTED"
+        c_status = "MATCH" if c_best >= MIN_SIMILARITY_THRESHOLD else "REJECT"
         c_top_page = c_results[0]["page"] if c_results else "N/A"
         chroma_total_lat.append(c_lat)
 
         print(f"\n💾 [1] ChromaDB (Local):")
-        print(f"   ⏱️ Latency: {c_lat:.2f} ms | 🎯 Top Match: {c_best:.1f}% | 📈 Avg: {c_avg:.1f}% | {c_status}")
+        print(f"   ⏱️ Latency: {c_lat:.2f} ms | 📈 Avg Match: {c_avg:.2f}% | 🎯 Top: {c_best:.2f}% | [{c_status}]")
         if c_best >= MIN_SIMILARITY_THRESHOLD:
             for rank, r in enumerate(c_results, start=1):
                 snip = clean_text_snippet(r["text"])
-                print(f"   👉 Rank [{rank}] | Match: {r['match_pct']:.1f}% (Sim: {r['cosine_sim']:.4f}) | Page: {r['page']}")
-                print(f"      Section: {r['section']}")
-                print(f"      Snippet: \"{snip}\"")
+                print(f"   👉 Rank [{rank}] | Match: {r['match_pct']:.1f}% | Page: {r['page']} | {snip}")
         else:
-            print("   ⛔ مستبعد بمصد الأمان لخروجه عن نطاق طب الأطفال.")
+            print("   ⛔ Excluded by safety threshold.")
 
-        # 2. Pinecone
+        # 2. تشغيل Pinecone
         p_results, p_best, p_avg, p_lat = run_pinecone_query(query)
-        p_status = "✅ MATCHED" if p_best >= MIN_SIMILARITY_THRESHOLD else "🛡️ REJECTED"
+        p_status = "MATCH" if p_best >= MIN_SIMILARITY_THRESHOLD else "REJECT"
         p_top_page = p_results[0]["page"] if p_results else "N/A"
         pinecone_total_lat.append(p_lat)
 
         print(f"\n🌲 [2] Pinecone (Cloud):")
-        print(f"   ⏱️ Latency: {p_lat:.2f} ms | 🎯 Top Match: {p_best:.1f}% | 📈 Avg: {p_avg:.1f}% | {p_status}")
+        print(f"   ⏱️ Latency: {p_lat:.2f} ms | 📈 Avg Match: {p_avg:.2f}% | 🎯 Top: {p_best:.2f}% | [{p_status}]")
         if p_best >= MIN_SIMILARITY_THRESHOLD:
             for rank, r in enumerate(p_results, start=1):
                 snip = clean_text_snippet(r["text"])
-                print(f"   👉 Rank [{rank}] | Match: {r['match_pct']:.1f}% (Sim: {r['cosine_sim']:.4f}) | Page: {r['page']}")
-                print(f"      Section: {r['section']}")
-                print(f"      Snippet: \"{snip}\"")
+                print(f"   👉 Rank [{rank}] | Match: {r['match_pct']:.1f}% | Page: {r['page']} | {snip}")
         else:
-            print("   ⛔ مستبعد بمصد الأمان لخروجه عن نطاق طب الأطفال.")
+            print("   ⛔ Excluded by safety threshold.")
 
-        speed_diff = abs(c_lat - p_lat)
-        faster = "ChromaDB" if c_lat < p_lat else "Pinecone"
-        page_agree = "✅ متطابق" if c_top_page == p_top_page else "⚠️ مختلف"
-        print(f"\n⚖️ مقارنة الحالة [{tc_id}]: الأسرع هو {faster} بفارق ({speed_diff:.1f} ms) | رقم الصفحة المسترجعة: {page_agree} (P.{c_top_page} vs P.{p_top_page})")
+        # مقارنة الدقة بناءً على المتوسط (Average Match %)
+        if abs(c_avg - p_avg) < 0.05:
+            acc_winner = "Tie (=)"
+        elif c_avg > p_avg:
+            acc_winner = "ChromaDB"
+        else:
+            acc_winner = "Pinecone"
+
+        # مقارنة السرعة
+        speed_winner = "ChromaDB" if c_lat < p_lat else "Pinecone"
 
         if c_best >= MIN_SIMILARITY_THRESHOLD:
             chroma_valid_acc.append(c_avg)
         if p_best >= MIN_SIMILARITY_THRESHOLD:
             pinecone_valid_acc.append(p_avg)
 
+        # إضافة السطر للجدول مع التركيز على المتوسط (Average)
         summary_table.append([
             tc_id,
-            case_name[:24],
-            f"{c_best:.1f}%",
+            case_name,
+            f"{c_avg:.2f}%",
             f"{c_lat:.1f} ms",
             f"P.{c_top_page}",
-            f"{p_best:.1f}%",
+            f"{p_avg:.2f}%",
             f"{p_lat:.1f} ms",
             f"P.{p_top_page}",
-            faster
+            acc_winner,
+            speed_winner
         ])
 
-    print("\n" + "=" * 105)
-    print("📋 BENCHMARK FINAL SUMMARY: HEAD-TO-HEAD COMPARISON")
-    print("=" * 105)
+    # طباعة الجدول النهائي
+    print("\n" + "=" * 110)
+    print("📋 BENCHMARK FINAL SUMMARY (EVALUATION BY AVERAGE MATCH %)")
+    print("=" * 110)
     headers = [
         "ID", "Case Name",
-        "Chroma Match", "Chroma Latency", "Chroma Page",
-        "Pinecone Match", "Pinecone Latency", "Pinecone Page",
-        "Speed Winner"
+        "Chroma Avg", "Chroma Lat", "C.Page",
+        "Pinecone Avg", "Pinecone Lat", "P.Page",
+        "Avg Winner", "Speed Winner"
     ]
     try:
         print(tabulate(summary_table, headers=headers, tablefmt="rounded_grid"))
@@ -218,15 +223,16 @@ def main_benchmark():
         for row in summary_table:
             print(" | ".join(str(x) for x in row))
 
+    # الإحصائيات العامة
     avg_c_lat = sum(chroma_total_lat) / len(chroma_total_lat)
     avg_p_lat = sum(pinecone_total_lat) / len(pinecone_total_lat)
     avg_c_acc = sum(chroma_valid_acc) / len(chroma_valid_acc) if chroma_valid_acc else 0
     avg_p_acc = sum(pinecone_valid_acc) / len(pinecone_valid_acc) if pinecone_valid_acc else 0
 
-    print("\n" + "─" * 105)
+    print("\n" + "─" * 110)
     print(f"📊 Overall Average Latency : 💾 ChromaDB = {avg_c_lat:.1f} ms  |  🌲 Pinecone = {avg_p_lat:.1f} ms")
-    print(f"🎯 Overall Valid Accuracy : 💾 ChromaDB = {avg_c_acc:.2f}%  |  🌲 Pinecone = {avg_p_acc:.2f}%")
-    print("=" * 105 + "\n")
+    print(f"🎯 Overall Average Accuracy: 💾 ChromaDB = {avg_c_acc:.2f}%  |  🌲 Pinecone = {avg_p_acc:.2f}%")
+    print("=" * 110 + "\n")
 
 
 if __name__ == "__main__":
