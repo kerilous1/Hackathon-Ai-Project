@@ -3,31 +3,30 @@ import re
 import chromadb
 from google import genai
 from google.genai import types
-import arabic_reshaper
-from bidi.algorithm import get_display
+from pinecone import Pinecone
+from sentence_transformers import SentenceTransformer
 
-# دالة ذكية لضبط اتجاه النص العربي داخل الـ Terminal سطراً بسطر
-def print_arabic(text: str):
-    try:
-        lines = text.split("\n")
-        formatted_lines = []
-        for line in lines:
-            # إذا كان السطر يحتوي على حروف عربية نقوم بتعديل اتجاهه
-            if re.search(r'[\u0600-\u06FF]', line):
-                reshaped_line = arabic_reshaper.reshape(line)
-                formatted_lines.append(get_display(reshaped_line))
-            else:
-                formatted_lines.append(line)
-        print("\n".join(formatted_lines))
-    except Exception:
-        print(text)
-
-
-# 1. إعداد مفتاح API والعميل
+# 1. إعداد مفاتيح الـ APIs
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6Lm0MpBXDCzIUT1cuOELwTWL52DJh1CW-ARPujPRU74Rg")
-ai_client = genai.Client(api_key=GEMINI_API_KEY)
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "YOUR_PINECONE_API_KEY_HERE")
 
-MODEL_NAME = "gemini-3.5-flash"
+ai_client = genai.Client(api_key=GEMINI_API_KEY)
+embed_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+# إعداد ChromaDB (Local)
+chroma_client = chromadb.PersistentClient(path="./chroma_db")
+chroma_collection = chroma_client.get_or_create_collection(name="imci_clinical_guidelines")
+
+# إعداد Pinecone (Cloud)
+pc = Pinecone(api_key=PINECONE_API_KEY)
+pinecone_index = pc.Index("imci-clinical-guidelines")
+
+FALLBACK_MODELS = [
+    "gemini-3.5-flash",
+    "gemini-3.7-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-latest"
+]
 
 SYSTEM_INSTRUCTION = """
 You are an expert WHO IMCI (Integrated Management of Childhood Illness) Clinical Decision Support Assistant.
@@ -49,61 +48,117 @@ Rules:
    - If the user asks in English, reply in English.
 """
 
-# 2. الاتصال بقاعدة بيانات ChromaDB المحلية
-client = chromadb.PersistentClient(path="./chroma_db")
-collection = client.get_or_create_collection(name="imci_clinical_guidelines")
+MIN_SIMILARITY_THRESHOLD = 43.5
 
-DISTANCE_THRESHOLD = 1.15
+
+def execute_genai_call(prompt_text: str, is_translation: bool = False) -> str:
+    last_err = ""
+    for model_name in FALLBACK_MODELS:
+        try:
+            cfg = None
+            if not is_translation:
+                cfg = types.GenerateContentConfig(
+                    system_instruction=SYSTEM_INSTRUCTION,
+                    temperature=0.2,
+                )
+            
+            response = ai_client.models.generate_content(
+                model=model_name,
+                contents=prompt_text,
+                config=cfg
+            )
+            return response.text
+        except Exception as e:
+            last_err = str(e)
+            if "503" in last_err or "429" in last_err or "UNAVAILABLE" in last_err:
+                print(f"⚠️ ضغط على موديل ({model_name})، جاري التبديل للموديل التالي...")
+                continue
+            else:
+                return f"❌ خطأ تقني: {last_err}"
+                
+    return f"❌ تعذر الاتصال بجميع الموديلات بسبب الضغط المؤقت: {last_err}"
 
 
 def prepare_search_query(user_query: str) -> str:
-    """تحويل الاستفسار العربي إلى مصطلحات طبية إنجليزية للبحث داخل قاعدة البيانات"""
     if re.search(r'[\u0600-\u06FF]', user_query):
         print("🌐 جاري تحويل المصطلحات الطبية للبحث الدلالي بالإنجليزية...")
-        try:
-            translation_resp = ai_client.models.generate_content(
-                model=MODEL_NAME,
-                contents=f"Translate this clinical scenario into concise medical English search terms: '{user_query}'. Return ONLY the translation."
-            )
-            search_query = translation_resp.text.strip()
-            print(f"🔄 Search Query (EN): \"{search_query}\"")
-            return search_query
-        except Exception:
-            return user_query
+        prompt = f"Translate this clinical scenario into concise medical English search terms: '{user_query}'. Return ONLY the translation without quotes."
+        search_query = execute_genai_call(prompt, is_translation=True).strip().replace('"', '')
+        print(f"🔄 Search Query (EN): \"{search_query}\"")
+        return search_query
     return user_query
 
 
-def ask_pedi_guide(doctor_query: str):
-    search_query = prepare_search_query(doctor_query)
-    
-    print(f"\n🔍 Searching IMCI Handbook for: \"{search_query}\"...")
-
-    results = collection.query(
-        query_texts=[search_query],
-        n_results=3,
+def retrieve_from_chroma(query: str, n_results: int = 3):
+    results = chroma_collection.query(
+        query_texts=[query],
+        n_results=n_results,
         include=["documents", "metadatas", "distances"]
     )
-
     if not results or not results["documents"] or not results["documents"][0]:
+        return [], 0.0
+
+    docs = results["documents"][0]
+    metas = results["metadatas"][0]
+    dists = results["distances"][0]
+    
+    top_cosine = 1.0 - (dists[0] / 2.0)
+    top_pct = max(0.0, top_cosine * 100.0)
+
+    extracted = []
+    for doc, meta in zip(docs, metas):
+        extracted.append({
+            "text": doc,
+            "page": meta.get("page_number", "N/A"),
+            "section": meta.get("section_title", "General")
+        })
+    return extracted, top_pct
+
+
+def retrieve_from_pinecone(query: str, n_results: int = 3):
+    query_vector = embed_model.encode(query).tolist()
+    results = pinecone_index.query(vector=query_vector, top_k=n_results, include_metadata=True)
+    
+    if not results.matches:
+        return [], 0.0
+
+    top_pct = max(0.0, results.matches[0].score * 100.0)
+
+    extracted = []
+    for match in results.matches:
+        meta = match.metadata or {}
+        extracted.append({
+            "text": meta.get("text", ""),
+            "page": meta.get("page_number", "N/A"),
+            "section": meta.get("section_title", "General")
+        })
+    return extracted, top_pct
+
+
+def ask_pedi_guide(doctor_query: str, db_backend: str = "chroma"):
+    search_query = prepare_search_query(doctor_query)
+    print(f"\n🔍 Searching [{db_backend.upper()}] for: \"{search_query}\"...")
+
+    if db_backend == "pinecone":
+        chunks, top_match_pct = retrieve_from_pinecone(search_query)
+    else:
+        chunks, top_match_pct = retrieve_from_chroma(search_query)
+
+    if not chunks:
         return "⚠️ لم يتم العثور على أي بيانات سريرية مطابقة في قاعدة البيانات."
 
-    best_dist = results['distances'][0][0]
-
     # مصد الأمان
-    if best_dist > DISTANCE_THRESHOLD:
+    if top_match_pct < MIN_SIMILARITY_THRESHOLD:
         return (
             f"🛡️ [Safeguard Rejection / Out of Scope]\n"
             f"عذراً، هذا الاستفسار خارج نطاق دليل منظمة الصحة العالمية لطب الأطفال (WHO IMCI Guidelines).\n"
-            f"هذا النظام مخصص فقط لحالات الأطفال وحديثي الولادة (Distance: {best_dist:.4f} > {DISTANCE_THRESHOLD})."
+            f"نسبة التطابق ({top_match_pct:.1f}%) أقل من الحد الأدنى المقبول ({MIN_SIMILARITY_THRESHOLD}%)."
         )
 
-    # تجهيز السياق الطبي وتنسيقه مع أرقام الصفحات
     context_blocks = []
-    for i, (doc, meta) in enumerate(zip(results["documents"][0], results["metadatas"][0])):
-        page = meta.get("page_number", "N/A")
-        section = meta.get("section_title", "General")
+    for i, item in enumerate(chunks):
         context_blocks.append(
-            f"--- EVIDENCE CHUNK [{i+1}] (Page: {page}, Section: {section}) ---\n{doc}\n"
+            f"--- EVIDENCE CHUNK [{i+1}] (Page: {item['page']}, Section: {item['section']}) ---\n{item['text']}\n"
         )
 
     full_context = "\n".join(context_blocks)
@@ -118,26 +173,23 @@ Retrieved Official IMCI Evidence Context:
 Provide a structured, accurate clinical response with citations based solely on the evidence above. Respond in the same language as the Doctor's Question.
 """
 
-    print(f"🤖 Generating clinical decision support using ({MODEL_NAME})...\n")
-    try:
-        response = ai_client.models.generate_content(
-            model=MODEL_NAME,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_INSTRUCTION,
-                temperature=0.2,
-            ),
-        )
-        return response.text
-    except Exception as e:
-        return f"❌ خطأ أثناء توليد الإجابة: {str(e)}"
+    print("🤖 Generating grounded clinical decision support...\n")
+    return execute_genai_call(prompt, is_translation=False)
 
 
 def main():
     print("=" * 66)
-    print("🩺 PEDI-GUIDE AI - CLINICAL ASSISTANT (END-TO-END RAG)")
+    print("🩺 PEDI-GUIDE AI - CLINICAL ASSISTANT (MULTI-VECTOR DB SUPPORT)")
     print("==================================================================")
     
+    print("\nاختر قاعدة البيانات المتجهة للتشغيل:")
+    print(" [1] 💾 ChromaDB (Local Embedded DB)")
+    print(" [2] 🌲 Pinecone (Cloud Serverless DB)")
+    choice = input("👉 الاختيار (1 أو 2 - الافتراضي 1): ").strip()
+    
+    db_backend = "pinecone" if choice == "2" else "chroma"
+    print(f"✅ تم تفعيل: {db_backend.upper()}\n" + "-" * 66)
+
     while True:
         query = input("\n📝 أدخل الحالة السريرية (أو 'exit' للخروج): ").strip()
         if query.lower() in ["exit", "quit", "q"]:
@@ -145,11 +197,11 @@ def main():
             break
         
         if query:
-            answer = ask_pedi_guide(query)
+            answer = ask_pedi_guide(query, db_backend=db_backend)
             print("\n" + "=" * 66)
-            print("📋 CLINICAL RESPONSE:")
+            print(f"📋 CLINICAL RESPONSE [{db_backend.upper()}]:")
             print("=" * 66)
-            print_arabic(answer)
+            print(answer)
             print("=" * 66)
 
 
