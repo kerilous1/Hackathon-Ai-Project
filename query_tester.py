@@ -49,6 +49,10 @@ test_queries = [
         "id": "TC-05",
         "case": "Jaundice Symptoms",
         "query": "symptoms of jaundice"
+    },
+    {
+        "name": "1. Out-of-Scope (Cardiology)",
+        "query": "adult coronary artery disease and nitroglycerin dosage",
     }
 ]
 

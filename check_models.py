@@ -1,7 +1,7 @@
 import os
 from google import genai
 
-API_KEY = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6Lm0MpBXDCzIUT1cuOELwTWL52DJh1CW-ARPujPRU74Rg")
+API_KEY = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6LGKWbPXRtEzqNKqNbohrVXKTk961gYEv1eK5DnmAxiPg")
 client = genai.Client(api_key=API_KEY)
 
 print("🔍 فحص الموديلات المتاحة لمفتاحك...\n")
