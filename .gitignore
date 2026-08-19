@@ -1,5 +1,41 @@
+# ── Environment & Secrets ──
 .env
+.env.local
+.env.*
+*.env
+
+# ── Python Cache & Bytecode ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── IDE & Editor Configs ──
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.metadata
+.DS_Store
+Thumbs.db
+
+# ── Flutter & Mobile App Build Artifacts ──
+ui/build/
+ui/.dart_tool/
+ui/.flutter-plugins
+ui/.flutter-plugins-dependencies
+ui/.packages
+ui/.pub-cache/
+ui/.pub/
+build/
+.dart_tool/
+
+# ── Local Vector Storage & Temporary Evaluation Data ──
 chroma_db/
 temp/
-__pycache__/
 *.pdf
+*.log
