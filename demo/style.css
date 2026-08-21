@@ -1,0 +1,1579 @@
+/* ==========================================================================
+   PediaCare.AI — Interactive Demo Design System & Stylesheet
+   Theme: Medical Teal, Cyber Cyan, Slate Navy, and WHO IMCI Triage Colors
+   Typography: Cairo (Arabic) & Outfit/Inter (English/Numbers)
+   ========================================================================== */
+
+:root {
+  /* Brand Palette */
+  --slate-navy-dark: #0A192F;
+  --slate-navy: #0F172A;
+  --slate-navy-light: #1E293B;
+  --slate-navy-border: #334155;
+
+  --medical-teal: #0D9488;
+  --medical-teal-light: #14B8A6;
+  --medical-teal-dark: #0F766E;
+  --medical-teal-bg: rgba(13, 148, 136, 0.08);
+
+  --cyber-cyan: #06B6D4;
+  --cyber-cyan-light: #22D3EE;
+  --cyber-cyan-bg: rgba(6, 182, 212, 0.08);
+
+  /* WHO IMCI Triage Severity Colors */
+  --emergency-red: #EF4444;
+  --emergency-red-dark: #DC2626;
+  --emergency-red-bg: #FEF2F2;
+  --emergency-red-border: #FECACA;
+
+  --clinical-amber: #F59E0B;
+  --clinical-amber-dark: #D97706;
+  --clinical-amber-bg: #FFFBEB;
+  --clinical-amber-border: #FDE68A;
+
+  --safe-emerald: #10B981;
+  --safe-emerald-dark: #059669;
+  --safe-emerald-bg: #ECFDF5;
+  --safe-emerald-border: #A7F3D0;
+
+  /* Surfaces & Neutrals */
+  --bg-main: #F8FAFC;
+  --surface-card: #FFFFFF;
+  --surface-subtle: #F1F5F9;
+  --border-light: #E2E8F0;
+  --border-focus: #0D9488;
+
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+  --text-light: #94A3B8;
+  --text-white: #FFFFFF;
+
+  /* Shadows & Glassmorphism */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-glow-teal: 0 0 20px rgba(13, 148, 136, 0.25);
+  --shadow-glow-red: 0 0 20px rgba(239, 68, 68, 0.25);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Global Reset & Base Typography */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+body[dir="ltr"] {
+  font-family: 'Outfit', 'Cairo', sans-serif;
+}
+
+/* Selection */
+::selection {
+  background: var(--medical-teal-light);
+  color: white;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-light);
+}
+
+/* ==========================================================================
+   Top Header Navigation Bar
+   ========================================================================== */
+.top-header {
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
+}
+
+.header-container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.brand-logo-badge {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, var(--medical-teal-dark), var(--medical-teal), var(--cyber-cyan));
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.4rem;
+  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.brand-logo-badge::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transform: rotate(45deg);
+  animation: shine 4s infinite;
+}
+
+@keyframes shine {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  20%, 100% { transform: translateX(100%) rotate(45deg); }
+}
+
+.brand-titles h1 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--slate-navy);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  line-height: 1.2;
+}
+
+.brand-titles h1 span.highlight {
+  color: var(--medical-teal);
+  background: linear-gradient(135deg, var(--medical-teal), var(--cyber-cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand-tagline {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* Header Controls & Badges */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--safe-emerald-bg);
+  color: var(--safe-emerald-dark);
+  border: 1px solid var(--safe-emerald-border);
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--safe-emerald);
+  animation: pulseDot 1.8s infinite;
+}
+
+@keyframes pulseDot {
+  0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.btn-header {
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: var(--transition-normal);
+  border: 1px solid var(--border-light);
+  background: var(--surface-card);
+  color: var(--slate-navy);
+}
+
+.btn-header:hover {
+  background: var(--surface-subtle);
+  border-color: #CBD5E1;
+  transform: translateY(-1px);
+}
+
+.btn-header.primary {
+  background: linear-gradient(135deg, var(--medical-teal-dark), var(--medical-teal));
+  color: white;
+  border: none;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3);
+}
+
+.btn-header.primary:hover {
+  background: linear-gradient(135deg, var(--medical-teal), var(--cyber-cyan));
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.4);
+}
+
+/* ==========================================================================
+   Navigation Tabs (Role & Feature Bar)
+   ========================================================================== */
+.nav-tab-bar {
+  background: var(--slate-navy-dark);
+  color: white;
+  padding: 0.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--slate-navy-border);
+}
+
+.tabs-container {
+  max-width: 1440px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.4rem 0;
+}
+
+.nav-tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94A3B8;
+  padding: 0.55rem 1.1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: var(--transition-normal);
+  white-space: nowrap;
+}
+
+.nav-tab-btn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.nav-tab-btn.active {
+  color: white;
+  background: linear-gradient(135deg, var(--medical-teal-dark), var(--medical-teal));
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35);
+  border-color: rgba(20, 184, 166, 0.3);
+}
+
+.nav-tab-btn .badge-pill {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.45rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-full);
+}
+
+/* ==========================================================================
+   Main Content Layout
+   ========================================================================== */
+.main-wrapper {
+  max-width: 1440px;
+  margin: 1.5rem auto;
+  padding: 0 1.5rem;
+  width: 100%;
+  flex: 1;
+}
+
+.tab-view {
+  display: none;
+  animation: fadeIn 0.3s ease;
+}
+
+.tab-view.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Top Patient Bar / Context Banner */
+.patient-context-banner {
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.patient-info-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.patient-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--medical-teal-bg);
+  border: 2px solid var(--medical-teal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.patient-details h3 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--slate-navy);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.patient-chips {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.patient-chip {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.55rem;
+  background: var(--surface-subtle);
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.patient-switcher-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.patient-select {
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--slate-navy);
+  background: var(--bg-main);
+  cursor: pointer;
+  outline: none;
+}
+
+.patient-select:focus {
+  border-color: var(--medical-teal);
+}
+
+/* ==========================================================================
+   Grid System & Cards
+   ========================================================================== */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1.5rem;
+}
+
+.col-12 { grid-column: span 12; }
+.col-8  { grid-column: span 8; }
+.col-7  { grid-column: span 7; }
+.col-6  { grid-column: span 6; }
+.col-5  { grid-column: span 5; }
+.col-4  { grid-column: span 4; }
+
+@media (max-width: 1024px) {
+  .col-8, .col-7, .col-6, .col-5, .col-4 {
+    grid-column: span 12;
+  }
+}
+
+.glass-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  transition: var(--transition-normal);
+}
+
+.glass-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--slate-navy);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Doctor Workstation: Clinical Protocols Explorer
+   ========================================================================== */
+.protocol-accordion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.protocol-item {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: var(--transition-normal);
+  background: var(--surface-card);
+}
+
+.protocol-item:hover {
+  border-color: #CBD5E1;
+}
+
+.protocol-item.active {
+  border-color: var(--medical-teal);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.1);
+}
+
+.protocol-header {
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  background: var(--surface-card);
+  user-select: none;
+}
+
+.protocol-header h4 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--slate-navy);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.protocol-tags {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.badge-triage {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+}
+
+.badge-triage.red {
+  background: var(--emergency-red-bg);
+  color: var(--emergency-red-dark);
+  border: 1px solid var(--emergency-red-border);
+}
+
+.badge-triage.yellow {
+  background: var(--clinical-amber-bg);
+  color: var(--clinical-amber-dark);
+  border: 1px solid var(--clinical-amber-border);
+}
+
+.badge-triage.green {
+  background: var(--safe-emerald-bg);
+  color: var(--safe-emerald-dark);
+  border: 1px solid var(--safe-emerald-border);
+}
+
+.badge-page {
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-md);
+}
+
+.protocol-body {
+  padding: 0 1.25rem 1.25rem 1.25rem;
+  border-top: 1px dashed var(--border-light);
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  display: none;
+  font-size: 0.88rem;
+}
+
+.protocol-item.active .protocol-body {
+  display: block;
+}
+
+.protocol-grid-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.protocol-box {
+  padding: 0.85rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+}
+
+.protocol-box.criteria {
+  background: #F8FAFC;
+  border-left: 3px solid var(--clinical-amber);
+}
+
+.protocol-box.action {
+  background: var(--medical-teal-bg);
+  border-left: 3px solid var(--medical-teal);
+}
+
+body[dir="rtl"] .protocol-box.criteria {
+  border-left: none;
+  border-right: 3px solid var(--clinical-amber);
+}
+
+body[dir="rtl"] .protocol-box.action {
+  border-left: none;
+  border-right: 3px solid var(--medical-teal);
+}
+
+/* ==========================================================================
+   PEWS (Pediatric Early Warning Score) Card
+   ========================================================================== */
+.pews-container {
+  background: var(--surface-card);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem;
+  border: 2px solid var(--safe-emerald-border);
+  transition: var(--transition-normal);
+}
+
+.pews-container.level-red {
+  border-color: var(--emergency-red);
+  box-shadow: var(--shadow-glow-red);
+  background: #FFFDFD;
+}
+
+.pews-container.level-yellow {
+  border-color: var(--clinical-amber);
+  background: #FFFFFD;
+}
+
+.pews-container.level-green {
+  border-color: var(--safe-emerald);
+}
+
+.pews-score-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.pews-number-badge {
+  font-size: 2.2rem;
+  font-weight: 900;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  background: var(--safe-emerald);
+  transition: var(--transition-normal);
+}
+
+.pews-container.level-red .pews-number-badge {
+  background: var(--emergency-red);
+  animation: pulseScore 1.2s infinite;
+}
+
+.pews-container.level-yellow .pews-number-badge {
+  background: var(--clinical-amber);
+}
+
+@keyframes pulseScore {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.pews-slider-row {
+  margin-bottom: 0.9rem;
+}
+
+.pews-slider-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+  color: var(--slate-navy);
+}
+
+.pews-slider-label span.val-label {
+  color: var(--medical-teal);
+  font-weight: 800;
+}
+
+.pews-range-input {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--medical-teal);
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   Plan C IV Fluid Resuscitation & Metronome
+   ========================================================================== */
+.iv-calculator-panel {
+  background: var(--emergency-red-bg);
+  border: 1px solid var(--emergency-red-border);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem;
+}
+
+.iv-header-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.iv-total-banner {
+  background: white;
+  border: 1px solid var(--emergency-red-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  font-weight: 800;
+  color: var(--emergency-red-dark);
+}
+
+.iv-stages-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.iv-stage-card {
+  background: white;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.85rem;
+}
+
+.iv-stage-card.highlight {
+  border: 2px solid var(--emergency-red);
+  background: #FFF8F8;
+}
+
+.iv-stage-card h5 {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--emergency-red-dark);
+  margin-bottom: 0.35rem;
+}
+
+.iv-drip-metronome-box {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  border: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.drip-visualizer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.drip-chamber {
+  width: 24px;
+  height: 48px;
+  border: 2px solid #94A3B8;
+  border-radius: 4px;
+  position: relative;
+  background: #F8FAFC;
+  overflow: hidden;
+}
+
+.drip-liquid {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 35%;
+  background: rgba(6, 182, 212, 0.4);
+}
+
+.drip-drop {
+  width: 6px;
+  height: 6px;
+  background: var(--cyber-cyan);
+  border-radius: 50%;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 4px;
+  opacity: 0;
+}
+
+.drip-chamber.animating .drip-drop {
+  animation: fallDrop var(--drip-speed, 1s) infinite;
+}
+
+@keyframes fallDrop {
+  0% { top: 4px; opacity: 1; transform: translateX(-50%) scale(1); }
+  70% { top: 28px; opacity: 1; transform: translateX(-50%) scale(1.2); }
+  100% { top: 32px; opacity: 0; transform: translateX(-50%) scale(0.5); }
+}
+
+.btn-metronome {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  border: none;
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: var(--transition-fast);
+  background: var(--emergency-red);
+  color: white;
+}
+
+.btn-metronome:hover {
+  background: var(--emergency-red-dark);
+}
+
+.btn-metronome.running {
+  background: #475569;
+}
+
+/* ==========================================================================
+   Animated Syringe Visualizer & Medication Calculator
+   ========================================================================== */
+.syringe-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem;
+}
+
+.med-select-tabs {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.med-tab-btn {
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: var(--surface-subtle);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition-fast);
+}
+
+.med-tab-btn.active {
+  background: var(--medical-teal);
+  color: white;
+  border-color: var(--medical-teal);
+}
+
+.syringe-visual-container {
+  margin: 1.25rem 0;
+  padding: 1rem;
+  background: #F8FAFC;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+}
+
+.syringe-barrel {
+  height: 48px;
+  background: #FFFFFF;
+  border: 2px solid #94A3B8;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+}
+
+.syringe-fill {
+  height: 100%;
+  width: var(--syringe-width, 50%);
+  background: linear-gradient(90deg, var(--medical-teal-dark), var(--medical-teal), var(--cyber-cyan));
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-radius: 4px 0 0 4px;
+}
+
+body[dir="rtl"] .syringe-fill {
+  border-radius: 0 4px 4px 0;
+}
+
+.syringe-ticks {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10px;
+  pointer-events: none;
+}
+
+.syringe-tick-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.tick-line {
+  width: 1.5px;
+  height: 8px;
+  background: #94A3B8;
+}
+
+.tick-text {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Respiratory Rate Counter with Animated Breathing Lungs
+   ========================================================================== */
+.respiratory-counter-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.lungs-animation-box {
+  width: 120px;
+  height: 120px;
+  margin: 0.75rem auto;
+  border-radius: 50%;
+  background: var(--cyber-cyan-bg);
+  border: 2px dashed var(--cyber-cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  transition: var(--transition-normal);
+}
+
+.lungs-icon {
+  font-size: 3rem;
+  color: var(--medical-teal);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.lungs-animation-box.breathing .lungs-icon {
+  animation: lungsExpand 0.7s infinite alternate ease-in-out;
+}
+
+@keyframes lungsExpand {
+  0% { transform: scale(0.95); }
+  100% { transform: scale(1.22); color: var(--cyber-cyan); }
+}
+
+.lungs-animation-box:active {
+  transform: scale(0.92);
+}
+
+.resp-stats-row {
+  display: flex;
+  justify-content: space-around;
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: var(--surface-subtle);
+  border-radius: var(--radius-md);
+}
+
+.resp-stat-item h4 {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--slate-navy);
+}
+
+.resp-stat-item p {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   Caregiver / Parent Smart Chat UI
+   ========================================================================== */
+.chat-container-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1.5rem;
+  height: 680px;
+}
+
+@media (max-width: 900px) {
+  .chat-container-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+}
+
+.chat-sidebar {
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.quick-symptom-chips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+}
+
+.symptom-chip-btn {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: var(--bg-main);
+  text-align: right;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--slate-navy);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+body[dir="ltr"] .symptom-chip-btn {
+  text-align: left;
+}
+
+.symptom-chip-btn:hover {
+  background: var(--medical-teal-bg);
+  border-color: var(--medical-teal);
+  transform: translateX(-4px);
+}
+
+body[dir="ltr"] .symptom-chip-btn:hover {
+  transform: translateX(4px);
+}
+
+.chat-main-area {
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+
+.chat-messages-scroll {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: #FAFBFD;
+}
+
+.message-bubble-row {
+  display: flex;
+  gap: 0.75rem;
+  max-width: 80%;
+}
+
+.message-bubble-row.user {
+  align-self: flex-start;
+  flex-direction: row-reverse;
+}
+
+body[dir="rtl"] .message-bubble-row.user {
+  align-self: flex-start;
+}
+
+body[dir="rtl"] .message-bubble-row.assistant {
+  align-self: flex-end;
+  flex-direction: row;
+}
+
+.msg-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.message-bubble-row.user .msg-avatar {
+  background: var(--slate-navy);
+  color: white;
+}
+
+.message-bubble-row.assistant .msg-avatar {
+  background: linear-gradient(135deg, var(--medical-teal), var(--cyber-cyan));
+  color: white;
+}
+
+.msg-bubble {
+  padding: 0.9rem 1.15rem;
+  border-radius: var(--radius-lg);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  box-shadow: var(--shadow-sm);
+}
+
+.message-bubble-row.user .msg-bubble {
+  background: var(--slate-navy);
+  color: white;
+  border-bottom-left-radius: 2px;
+}
+
+.message-bubble-row.assistant .msg-bubble {
+  background: white;
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  border-bottom-right-radius: 2px;
+}
+
+/* Triage Card Result in Chat */
+.chat-triage-card {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+}
+
+.chat-triage-card.red {
+  background: var(--emergency-red-bg);
+  border-color: var(--emergency-red-border);
+}
+
+.chat-triage-card.yellow {
+  background: var(--clinical-amber-bg);
+  border-color: var(--clinical-amber-border);
+}
+
+.chat-triage-card.green {
+  background: var(--safe-emerald-bg);
+  border-color: var(--safe-emerald-border);
+}
+
+.chat-input-bar {
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border-light);
+  background: white;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.chat-text-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-light);
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.chat-text-input:focus {
+  border-color: var(--medical-teal);
+}
+
+.btn-icon-round {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface-subtle);
+  color: var(--slate-navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.btn-icon-round:hover {
+  background: #E2E8F0;
+}
+
+.btn-icon-round.btn-send {
+  background: var(--medical-teal);
+  color: white;
+}
+
+.btn-icon-round.btn-send:hover {
+  background: var(--medical-teal-dark);
+}
+
+.btn-icon-round.btn-mic.recording {
+  background: var(--emergency-red);
+  color: white;
+  animation: pulseRecording 1s infinite;
+}
+
+@keyframes pulseRecording {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* ==========================================================================
+   Evidence Sources & Cosine Similarity Inspector (RAG Live Explorer)
+   ========================================================================== */
+.rag-search-box {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.rag-search-input {
+  flex: 1;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.rag-search-input:focus {
+  border-color: var(--medical-teal);
+}
+
+.evidence-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.evidence-card-item {
+  background: white;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  transition: var(--transition-normal);
+}
+
+.evidence-card-item:hover {
+  border-color: var(--medical-teal-light);
+  transform: translateY(-2px);
+}
+
+.evidence-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.similarity-meter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.meter-bar-track {
+  width: 100px;
+  height: 8px;
+  background: #E2E8F0;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.meter-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--medical-teal), var(--cyber-cyan));
+  width: var(--score-pct, 70%);
+}
+
+.excerpt-blockquote {
+  background: #F8FAFC;
+  border-right: 3px solid var(--medical-teal);
+  padding: 0.75rem 1rem;
+  font-size: 0.88rem;
+  color: #334155;
+  border-radius: var(--radius-sm);
+  line-height: 1.6;
+}
+
+body[dir="ltr"] .excerpt-blockquote {
+  border-right: none;
+  border-left: 3px solid var(--medical-teal);
+}
+
+/* ==========================================================================
+   Benchmark & Clinical Evaluation Suite UI
+   ========================================================================== */
+.benchmark-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+
+.benchmark-table th, .benchmark-table td {
+  padding: 0.85rem 1rem;
+  text-align: right;
+  border-bottom: 1px solid var(--border-light);
+}
+
+body[dir="ltr"] .benchmark-table th, 
+body[dir="ltr"] .benchmark-table td {
+  text-align: left;
+}
+
+.benchmark-table th {
+  background: var(--surface-subtle);
+  font-weight: 800;
+  color: var(--slate-navy);
+}
+
+.status-badge-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.status-badge-tag.pass {
+  background: var(--safe-emerald-bg);
+  color: var(--safe-emerald-dark);
+}
+
+.status-badge-tag.rejected {
+  background: var(--emergency-red-bg);
+  color: var(--emergency-red-dark);
+}
+
+/* ==========================================================================
+   Interactive Tour & Explainer Modal (Walkthrough Overlay)
+   ========================================================================== */
+.tour-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(10, 25, 47, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.tour-modal-overlay.active {
+  display: flex;
+}
+
+.tour-modal-card {
+  background: white;
+  border-radius: var(--radius-xl);
+  max-width: 680px;
+  width: 100%;
+  padding: 2rem;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  animation: zoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.tour-step-indicator {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.step-dot {
+  flex: 1;
+  height: 6px;
+  background: #E2E8F0;
+  border-radius: var(--radius-full);
+}
+
+.step-dot.active {
+  background: var(--medical-teal);
+}
+
+.tour-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-light);
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+.main-footer {
+  background: var(--surface-card);
+  border-top: 1px solid var(--border-light);
+  padding: 1.25rem 1.5rem;
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Cinematic Auto-Demo & Google-Style Presentation Showcase Bar
+   ========================================================================== */
+.cinematic-story-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(120px);
+  width: 90%;
+  max-width: 960px;
+  background: rgba(10, 25, 47, 0.94);
+  backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(6, 182, 212, 0.4);
+  border-radius: var(--radius-xl);
+  padding: 1.2rem 1.75rem;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), 0 0 30px rgba(6, 182, 212, 0.25);
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  color: white;
+}
+
+.cinematic-story-bar.active {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: all;
+}
+
+.cinematic-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cinematic-badge-tag {
+  background: linear-gradient(135deg, var(--medical-teal), var(--cyber-cyan));
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  letter-spacing: 0.5px;
+}
+
+.cinematic-title-text {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cinematic-desc-text {
+  font-size: 0.92rem;
+  color: #CBD5E1;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+.cinematic-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cinematic-progress-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-full);
+  margin: 0 1.25rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.cinematic-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--medical-teal), var(--cyber-cyan-light));
+  border-radius: var(--radius-full);
+  transition: width 0.3s linear;
+}
+
+.btn-cinematic-action {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: var(--transition-fast);
+}
+
+.btn-cinematic-action:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-cinematic-action.primary {
+  background: var(--medical-teal);
+  border-color: var(--medical-teal-light);
+}
+
+/* Spotlight Highlight */
+.spotlight-focused {
+  position: relative;
+  z-index: 2500 !important;
+  box-shadow: 0 0 0 6px var(--cyber-cyan), 0 10px 40px rgba(6, 182, 212, 0.4) !important;
+  transform: scale(1.02);
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+

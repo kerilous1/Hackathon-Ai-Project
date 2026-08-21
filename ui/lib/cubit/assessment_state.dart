@@ -1,87 +1,64 @@
 import '../models/child_model.dart';
 import '../models/assessment_model.dart';
 import '../models/chat_message_model.dart';
+import '../models/symptom_timeline_model.dart';
 
-enum AssessmentStatus { initial, loading, success, failure, validationError }
+enum AssessmentStatus { initial, loading, success, error }
 
 class AssessmentState {
   final AssessmentStatus status;
-  final String selectedRole; // 'parent', 'doctor', 'clinic'
+  final ChildModel? activeChild;
   final List<ChildModel> children;
-  final ChildModel activeChild;
-  final AssessmentResponse? currentAssessment;
-  final List<AssessmentRecordModel> historyList;
   final List<ChatMessageModel> chatMessages;
-  final int bottomNavIndex;
+  final AssessmentResponseModel? currentAssessment;
+  final List<AssessmentResponseModel> historyAssessments;
+  final List<SymptomLogEntry> timelineEntries;
+  final bool isOffline;
+  final bool isArabicMode;
+  final String userRole; // 'parent', 'doctor', 'clinic'
   final String? errorMessage;
 
-  AssessmentState({
+  const AssessmentState({
     this.status = AssessmentStatus.initial,
-    this.selectedRole = 'parent',
-    required this.children,
-    required this.activeChild,
+    this.activeChild,
+    this.children = const [],
+    this.chatMessages = const [],
     this.currentAssessment,
-    required this.historyList,
-    required this.chatMessages,
-    this.bottomNavIndex = 0,
+    this.historyAssessments = const [],
+    this.timelineEntries = const [],
+    this.isOffline = false,
+    this.isArabicMode = true,
+    this.userRole = 'parent',
     this.errorMessage,
   });
 
-  factory AssessmentState.initial({
-    required List<ChildModel> children,
-    required List<AssessmentRecordModel> history,
-  }) {
-    final defaultChild = children.isNotEmpty
-        ? children.first
-        : ChildModel(
-            id: 'child_adam',
-            name: 'آدم',
-            age: 4.0,
-            weight: 17.0,
-            gender: 'ذكر',
-            birthDate: ChildModel.calculateBirthDate(4.0),
-            avatarType: 'boy',
-          );
-
-    return AssessmentState(
-      status: AssessmentStatus.initial,
-      selectedRole: 'parent',
-      children: children,
-      activeChild: defaultChild,
-      currentAssessment: null,
-      historyList: history,
-      chatMessages: [
-        ChatMessageModel(
-          id: 'welcome_1',
-          sender: 'ai',
-          text: 'مرحباً بك! أنا مساعدك السريري الذكي المعتمد على إرشادات منظمة الصحة العالمية (WHO IMCI).\nما الأعراض التي يعاني منها ${defaultChild.name}؟',
-          timestamp: 'الآن',
-        ),
-      ],
-      bottomNavIndex: 0,
-    );
-  }
+  bool get isLoading => status == AssessmentStatus.loading;
+  bool get hasActiveChild => activeChild != null;
 
   AssessmentState copyWith({
     AssessmentStatus? status,
-    String? selectedRole,
-    List<ChildModel>? children,
     ChildModel? activeChild,
-    AssessmentResponse? currentAssessment,
-    List<AssessmentRecordModel>? historyList,
+    List<ChildModel>? children,
     List<ChatMessageModel>? chatMessages,
-    int? bottomNavIndex,
+    AssessmentResponseModel? currentAssessment,
+    List<AssessmentResponseModel>? historyAssessments,
+    List<SymptomLogEntry>? timelineEntries,
+    bool? isOffline,
+    bool? isArabicMode,
+    String? userRole,
     String? errorMessage,
   }) {
     return AssessmentState(
       status: status ?? this.status,
-      selectedRole: selectedRole ?? this.selectedRole,
-      children: children ?? this.children,
       activeChild: activeChild ?? this.activeChild,
-      currentAssessment: currentAssessment ?? this.currentAssessment,
-      historyList: historyList ?? this.historyList,
+      children: children ?? this.children,
       chatMessages: chatMessages ?? this.chatMessages,
-      bottomNavIndex: bottomNavIndex ?? this.bottomNavIndex,
+      currentAssessment: currentAssessment ?? this.currentAssessment,
+      historyAssessments: historyAssessments ?? this.historyAssessments,
+      timelineEntries: timelineEntries ?? this.timelineEntries,
+      isOffline: isOffline ?? this.isOffline,
+      isArabicMode: isArabicMode ?? this.isArabicMode,
+      userRole: userRole ?? this.userRole,
       errorMessage: errorMessage,
     );
   }

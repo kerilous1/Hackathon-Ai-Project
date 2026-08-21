@@ -2,110 +2,96 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
-class TriageBadge extends StatelessWidget {
-  final String triageLevel; // 'RED', 'YELLOW', 'GREEN', 'REFUSAL'
+class TriageBadgeWidget extends StatelessWidget {
+  final String triageLevel; // 'RED', 'YELLOW', 'GREEN', 'GRAY'
   final String? label;
-  final bool isLarge;
+  final bool isCompact;
 
-  const TriageBadge({
+  const TriageBadgeWidget({
     super.key,
     required this.triageLevel,
     this.label,
-    this.isLarge = false,
+    this.isCompact = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final level = triageLevel.toUpperCase();
-    Color bgColor;
-    Color borderColor;
-    Color textColor;
+    Color bg;
+    Color border;
+    Color text;
     IconData icon;
     String defaultLabel;
 
-    switch (level) {
+    switch (triageLevel.toUpperCase()) {
       case 'RED':
-        bgColor = AppColors.triageRedBg;
-        borderColor = AppColors.triageRedBorder;
-        textColor = AppColors.triageRedText;
-        icon = Icons.error_rounded;
-        defaultLabel = 'خطر عاجل - تحويل فوري';
-        break;
-      case 'GREEN':
-        bgColor = AppColors.triageGreenBg;
-        borderColor = AppColors.triageGreenBorder;
-        textColor = AppColors.triageGreenText;
-        icon = Icons.check_circle_rounded;
-        defaultLabel = 'لا توجد علامات خطر';
-        break;
-      case 'REFUSAL':
-        bgColor = const Color(0xFFF1F5F9);
-        borderColor = const Color(0xFFCBD5E1);
-        textColor = const Color(0xFF475569);
-        icon = Icons.shield_rounded;
-        defaultLabel = 'خارج نطاق التقييم';
+        bg = AppColors.emergencyRedBg;
+        border = AppColors.emergencyRedBorder;
+        text = AppColors.emergencyRedDark;
+        icon = Icons.emergency_rounded;
+        defaultLabel = 'خطر عاجل - تحويل فوري للمستشفى 🔴';
         break;
       case 'YELLOW':
-      default:
-        bgColor = AppColors.triageYellowBg;
-        borderColor = AppColors.triageYellowBorder;
-        textColor = AppColors.triageYellowText;
+        bg = AppColors.clinicalAmberBg;
+        border = AppColors.clinicalAmberBorder;
+        text = AppColors.clinicalAmberDark;
         icon = Icons.warning_amber_rounded;
-        defaultLabel = 'يحتاج إلى تقييم طبي';
+        defaultLabel = 'علاج نوعي في العيادة 🟡';
         break;
+      case 'GREEN':
+        bg = AppColors.safeEmeraldBg;
+        border = AppColors.safeEmeraldBorder;
+        text = AppColors.safeEmeraldDark;
+        icon = Icons.check_circle_rounded;
+        defaultLabel = 'رعاية منزلية آمنة 🟢';
+        break;
+      default:
+        bg = const Color(0xFFF1F5F9);
+        border = const Color(0xFFCBD5E1);
+        text = const Color(0xFF475569);
+        icon = Icons.shield_outlined;
+        defaultLabel = 'رفض سريري / خارج النطاق 🛡️';
     }
 
     final displayText = label ?? defaultLabel;
 
-    if (isLarge) {
+    if (isCompact) {
+      String compactLabel;
+      switch (triageLevel.toUpperCase()) {
+        case 'RED':
+          compactLabel = 'خطر عاجل 🔴';
+          break;
+        case 'YELLOW':
+          compactLabel = 'علاج عيادة 🟡';
+          break;
+        case 'GREEN':
+          compactLabel = 'رعاية منزلية 🟢';
+          break;
+        default:
+          compactLabel = 'خارج النطاق 🛡️';
+      }
+      final displayText = label ?? compactLabel;
+
       return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: borderColor, width: 1.5),
+          color: bg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: border, width: 1),
         ),
-        child: Column(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'مستوى الخطورة',
-              style: GoogleFonts.cairo(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: textColor.withOpacity(0.85),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: textColor, size: 22),
-                const SizedBox(width: 8),
-                Text(
-                  displayText,
-                  style: GoogleFonts.cairo(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: textColor,
-                  ),
+            Icon(icon, size: 13, color: text),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                displayText,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.cairo(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: text,
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              level == 'RED'
-                  ? 'يجب التوجه فوراً إلى أقرب مستشفى أو وحدة طوارئ.'
-                  : level == 'GREEN'
-                      ? 'رعاية منزلية آمنة مع استمرار المتابعة والتغذية.'
-                      : level == 'REFUSAL'
-                          ? 'هذه الحالة خارج نطاق بروتوكول WHO IMCI. يرجى استشارة طبيب مختص.'
-                          : 'لا توجد علامات خطر فورية، لكن يفضل استشارة طبيب...',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.cairo(
-                fontSize: 13,
-                color: textColor.withOpacity(0.9),
-                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -114,30 +100,52 @@ class TriageBadge extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor, width: 1),
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: border, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: text.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 8,
-            height: 8,
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: textColor,
+              color: text.withOpacity(0.12),
               shape: BoxShape.circle,
             ),
+            child: Icon(icon, size: 24, color: text),
           ),
-          const SizedBox(width: 6),
-          Text(
-            displayText,
-            style: GoogleFonts.cairo(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: textColor,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'تصنيف الفرز السريري (WHO IMCI)',
+                  style: GoogleFonts.cairo(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: text.withOpacity(0.8),
+                  ),
+                ),
+                Text(
+                  displayText,
+                  style: GoogleFonts.cairo(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: text,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

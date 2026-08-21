@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PediaCare.AI — WHO IMCI Clinical Decision Support System Demo</title>
+  
+  <!-- Google Fonts: Cairo for Arabic & Outfit/Inter for Latin -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons for Medical & Clinical UI -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- QRCode.js Library for instant medical report sharing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- Application Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- =======================================================================
+       1. Top Header Navigation & Identity Bar
+       ======================================================================= -->
+  <header class="top-header">
+    <div class="header-container">
+      <div class="brand-section" onclick="switchTab('doctor-tab')">
+        <div class="brand-logo-badge">
+          <i class="fa-solid fa-stethoscope"></i>
+        </div>
+        <div class="brand-titles">
+          <h1>PediaCare<span class="highlight">.AI</span></h1>
+          <span class="brand-tagline" id="brandTagline">نظام دعم القرار السريري الذكي المعتمد على إرشادات WHO IMCI</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Live Backend / Offline Engine Status Indicator -->
+        <div class="mode-badge" id="engineStatusBadge" title="حالة المحرك السريري">
+          <span class="pulse-dot"></span>
+          <span id="engineStatusText">المحرك السريري المحلي (Offline IMCI)</span>
+        </div>
+
+        <!-- Language Toggle (AR / EN) -->
+        <button class="btn-header" id="langToggleBtn" onclick="toggleLanguage()">
+          <i class="fa-solid fa-globe"></i>
+          <span id="langBtnText">English</span>
+        </button>
+
+        <!-- Interactive Tour Guide Trigger -->
+        <button class="btn-header" onclick="startTour()">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span id="tourBtnText">جولة توضيحية</span>
+        </button>
+
+        <!-- Google-Style Cinematic Video Presentation (60-75s) -->
+        <a href="video_presentation.html" class="btn-header primary" style="text-decoration: none; font-weight: 800; background: linear-gradient(135deg, #0D9488, #06B6D4); box-shadow: 0 4px 15px rgba(6, 182, 212, 0.35);">
+          <i class="fa-solid fa-clapperboard"></i>
+          <span>🎬 فيديو العرض التقديمي (PowerPoint Video)</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- =======================================================================
+       2. Role & Feature Navigation Tabs Bar
+       ======================================================================= -->
+  <nav class="nav-tab-bar">
+    <div class="tabs-container">
+      <button class="nav-tab-btn active" id="tab-btn-doctor" onclick="switchTab('doctor-tab')">
+        <i class="fa-solid fa-user-doctor"></i>
+        <span id="tabLabelDoctor">محطة عمل الطبيب</span>
+        <span class="badge-pill">Workstation</span>
+      </button>
+
+      <button class="nav-tab-btn" id="tab-btn-chat" onclick="switchTab('chat-tab')">
+        <i class="fa-solid fa-comments"></i>
+        <span id="tabLabelChat">محادثة ولي الأمر</span>
+        <span class="badge-pill">Smart Chat</span>
+      </button>
+
+      <button class="nav-tab-btn" id="tab-btn-evidence" onclick="switchTab('evidence-tab')">
+        <i class="fa-solid fa-book-medical"></i>
+        <span id="tabLabelEvidence">مستكشف الأدلة والـ RAG</span>
+        <span class="badge-pill">142 Pages</span>
+      </button>
+
+      <button class="nav-tab-btn" id="tab-btn-timeline" onclick="switchTab('timeline-tab')">
+        <i class="fa-solid fa-chart-line"></i>
+        <span id="tabLabelTimeline">الخط الزمني وسجل الحالات</span>
+        <span class="badge-pill">Timeline</span>
+      </button>
+
+      <button class="nav-tab-btn" id="tab-btn-benchmark" onclick="switchTab('benchmark-tab')">
+        <i class="fa-solid fa-vial-circle-check"></i>
+        <span id="tabLabelBenchmark">لوحة الاختبارات المعيارية</span>
+        <span class="badge-pill">Benchmark</span>
+      </button>
+
+      <button class="nav-tab-btn" id="tab-btn-architecture" onclick="switchTab('architecture-tab')">
+        <i class="fa-solid fa-diagram-project"></i>
+        <span id="tabLabelArch">الهيكل ومصدات الأمان</span>
+        <span class="badge-pill">Explainability</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- =======================================================================
+       3. Main Content Wrapper
+       ======================================================================= -->
+  <main class="main-wrapper">
+
+    <!-- Active Patient Context Banner -->
+    <section class="patient-context-banner" id="patientContextBanner">
+      <div class="patient-info-group">
+        <div class="patient-avatar" id="patientAvatarIcon">👶</div>
+        <div class="patient-details">
+          <h3 id="patientNameDisplay">عمر أحمد <span class="badge-triage yellow" id="patientTriageBadge">🟡 عيادة / أصفر</span></h3>
+          <div class="patient-chips">
+            <span class="patient-chip" id="patientAgeDisplay"><i class="fa-solid fa-cake-candles"></i> 8 شهور (240 يوم)</span>
+            <span class="patient-chip" id="patientWeightDisplay"><i class="fa-solid fa-weight-scale"></i> 8.5 كجم</span>
+            <span class="patient-chip" id="patientGenderDisplay"><i class="fa-solid fa-venus-mars"></i> ذكر</span>
+            <span class="patient-chip" id="patientFastBreathingThreshold"><i class="fa-solid fa-lungs"></i> عتبة التنفس السريع: ≥50 نفس/د</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="patient-switcher-group">
+        <label for="childSelector" style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted);">
+          <i class="fa-solid fa-arrows-rotate"></i> تبديل حالة الطفل:
+        </label>
+        <select id="childSelector" class="patient-select" onchange="onPatientChanged(this.value)">
+          <option value="omar">عمر (8 شهور - 8.5 كجم - سعال وتنفس سريع)</option>
+          <option value="layla">ليلى (3 سنوات - 14.0 كجم - إسهال وجفاف)</option>
+          <option value="youssef">يوسف (45 يوم - 4.2 كجم - رضيع صغير / خطورة PSBI)</option>
+          <option value="nour">نور (18 شهر - 10.5 كجم - حمى وتيبس رقبة 🔴)</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         TAB 1: DOCTOR / CLINICIAN WORKSTATION
+         ===================================================================== -->
+    <div class="tab-view active" id="doctor-tab">
+      <div class="dashboard-grid">
+        
+        <!-- Left Column: WHO IMCI Clinical Protocols Explorer (Core Guidelines) -->
+        <div class="col-7">
+          <div class="glass-card">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title"><i class="fa-solid fa-file-medical-pulse" style="color: var(--medical-teal);"></i> بروتوكولات منظمة الصحة العالمية (WHO IMCI)</h3>
+                <p class="card-subtitle">تصفح الدليل السريري المعتمد لتقييم وتصنيف وعلاج أمراض الطفولة الشائعة</p>
+              </div>
+              <span class="badge-page">142 Pages Handbook</span>
+            </div>
+
+            <!-- Protocols Accordion -->
+            <div class="protocol-accordion-list" id="protocolsAccordion">
+              
+              <!-- 1. Danger Signs -->
+              <div class="protocol-item active">
+                <div class="protocol-header" onclick="toggleProtocol(this)">
+                  <h4><i class="fa-solid fa-triangle-exclamation" style="color: var(--emergency-red);"></i> 1. علامات الخطورة العامة (General Danger Signs)</h4>
+                  <div class="protocol-tags">
+                    <span class="badge-triage red">🔴 طارئ / تحويل فوري</span>
+                    <span class="badge-page">ص 16–18</span>
+                  </div>
+                </div>
+                <div class="protocol-body">
+                  <div class="protocol-grid-details">
+                    <div class="protocol-box criteria">
+                      <strong>معايير الفحص السريري:</strong>
+                      <p>عجز عن الشرب أو الرضاعة، قيء مستمر لكل شيء، تشنجات خلال المرض الحالي، خمول شديد أو فقدان تام للوعي.</p>
+                    </div>
+                    <div class="protocol-box action">
+                      <strong>الإجراء السريري الفوري:</strong>
+                      <p>إعطاء الجرعة التحويلية الأولى من المضاد الحيوي، منع هبوط السكر، التدفئة، والإحالة الطارئة فوراً للمستشفى.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 2. Cough & Breathing -->
+              <div class="protocol-item">
+                <div class="protocol-header" onclick="toggleProtocol(this)">
+                  <h4><i class="fa-solid fa-lungs" style="color: var(--cyber-cyan);"></i> 2. السعال وصعوبة التنفس (Cough & Fast Breathing)</h4>
+                  <div class="protocol-tags">
+                    <span class="badge-triage yellow">🟡 عيادة / 🔴 طارئ</span>
+                    <span class="badge-page">ص 20–24</span>
+                  </div>
+                </div>
+                <div class="protocol-body">
+                  <div class="protocol-grid-details">
+                    <div class="protocol-box criteria">
+                      <strong>معايير الفحص السريري:</strong>
+                      <p>عتبات التنفس السريع: ≥60 (&lt; شهرين)، ≥50 (2–11 شهراً)، ≥40 (1–5 سنوات). انسحاب جدار الصدر أو صرير = التهاب رئوي وخيم (🔴).</p>
+                    </div>
+                    <div class="protocol-box action">
+                      <strong>الإجراء السريري الفوري:</strong>
+                      <p>التهاب رئوي وخيم: أكسجين + جرعة تحويلية + تحويل عاجل. تنفس سريع فقط: أموكسيسيلين فموي 5 أيام ومتابعة بعد يومين.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 3. Diarrhoea & Dehydration -->
+              <div class="protocol-item">
+                <div class="protocol-header" onclick="toggleProtocol(this)">
+                  <h4><i class="fa-solid fa-droplet" style="color: var(--medical-teal);"></i> 3. الإسهال والجفاف (Diarrhoea & Dehydration)</h4>
+                  <div class="protocol-tags">
+                    <span class="badge-triage red">🔴 خطة ج / 🟡 خطة ب</span>
+                    <span class="badge-page">ص 25–31</span>
+                  </div>
+                </div>
+                <div class="protocol-body">
+                  <div class="protocol-grid-details">
+                    <div class="protocol-box criteria">
+                      <strong>معايير الفحص السريري:</strong>
+                      <p>جفاف شديد (🔴 الخطة ج): علامتان (خمول، عيون غائرة، عجز عن الشرب، قرصة الجلد ترجع &gt; 2 ثانية). بعض الجفاف (🟡 الخطة ب): تململ، شرب بلهفة.</p>
+                    </div>
+                    <div class="protocol-box action">
+                      <strong>الإجراء السريري الفوري:</strong>
+                      <p>الخطة ج: رينجر لاكتات وريدي 100 مل/كجم. الخطة ب: محلول جفاف 75 مل/كجم خلال 4 ساعات + زنك 14 يوماً.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 4. Fever & Malaria -->
+              <div class="protocol-item">
+                <div class="protocol-header" onclick="toggleProtocol(this)">
+                  <h4><i class="fa-solid fa-temperature-arrow-up" style="color: var(--emergency-red-dark);"></i> 4. الحمى والملاريا (Fever & Severe Febrile Disease)</h4>
+                  <div class="protocol-tags">
+                    <span class="badge-triage red">🔴 وخيم / 🟡 ملاريا</span>
+                    <span class="badge-page">ص 32–42</span>
+                  </div>
+                </div>
+                <div class="protocol-body">
+                  <div class="protocol-grid-details">
+                    <div class="protocol-box criteria">
+                      <strong>معايير الفحص السريري:</strong>
+                      <p>مرض حموي وخيم (🔴): تيبس بالرقبة، طفح جلدي نمشي، أو أي علامة خطورة عامة. ملاريا: فحص RDT إيجابي.</p>
+                    </div>
+                    <div class="protocol-box action">
+                      <strong>الإجراء السريري الفوري:</strong>
+                      <p>مرض حموي وخيم: سيفترياكسون/أمبيسيلين عضل + باراسيتامول للحمى ≥38.5°C + تحويل فوري. ملاريا: كورس ACT كامل.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 5. Young Infant 0-2 Months -->
+              <div class="protocol-item">
+                <div class="protocol-header" onclick="toggleProtocol(this)">
+                  <h4><i class="fa-solid fa-baby" style="color: #6366F1;"></i> 5. الرضيع الصغير (Young Infant 7d–2m PSBI)</h4>
+                  <div class="protocol-tags">
+                    <span class="badge-triage red">🔴 عدوى بكتيرية وخيمة</span>
+                    <span class="badge-page">ص 61–72</span>
+                  </div>
+                </div>
+                <div class="protocol-body">
+                  <div class="protocol-grid-details">
+                    <div class="protocol-box criteria">
+                      <strong>معايير الفحص السريري:</strong>
+                      <p>تنفس سريع ≥60، هبوط حرارة &lt;35.5°C، شخير عند الزفير، انسحاب شديد بالصدر، خمول وضعف حركة، يرقان في أول 24 ساعة.</p>
+                    </div>
+                    <div class="protocol-box action">
+                      <strong>الإجراء السريري الفوري:</strong>
+                      <p>أمبيسيلين 50 مجم/كجم عضل + جنتاميسين 5 مجم/كجم عضل + تدفئة وسكر + إحالة عاجلة. يمنع الأموكسيسيلين الفموي.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Generate Clinical Summary / QR Code Export -->
+            <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid var(--border-light);">
+              <div>
+                <span style="font-size: 0.85rem; font-weight: 700; color: var(--slate-navy);"><i class="fa-solid fa-qrcode"></i> مشاركة التقرير الطبي مع الطبيب أو ولي الأمر:</span>
+              </div>
+              <button class="btn-header primary" onclick="generateCaseSummaryReport()">
+                <i class="fa-solid fa-print"></i> توليد التقرير السريري ورمز الـ QR
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Right Column: Interactive Clinical Calculators & Visualizers -->
+        <div class="col-5">
+          
+          <!-- Tool 1: Interactive PEWS Score Calculator -->
+          <div class="pews-container level-yellow" id="pewsCard">
+            <div class="card-header" style="margin-bottom: 0.75rem; padding-bottom: 0.5rem;">
+              <div class="card-title" style="font-size: 0.95rem;">
+                <i class="fa-solid fa-gauge-high" style="color: var(--clinical-amber);"></i>
+                <span>مقياس الإنذار المبكر للأطفال (PEWS)</span>
+              </div>
+              <span class="badge-triage yellow" id="pewsRiskBadge">خطر متوسط (3 نقاط)</span>
+            </div>
+
+            <div class="pews-score-display">
+              <div>
+                <p style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);" id="pewsRecommendationText">
+                  إبلاغ الطبيب المناوب، قياس العلامات الحيوية كل ساعتين، وتقييم الاستجابة.
+                </p>
+              </div>
+              <div class="pews-number-badge" id="pewsTotalScoreBadge">3</div>
+            </div>
+
+            <!-- Parameters Sliders -->
+            <div class="pews-slider-row">
+              <div class="pews-slider-label">
+                <span>الجهاز التنفسي (Respiratory):</span>
+                <span class="val-label" id="pewsRespLabel">+1 (تنفس سريع فوق المعدل)</span>
+              </div>
+              <input type="range" min="0" max="3" value="1" class="pews-range-input" id="pewsRespSlider" oninput="updatePEWS()">
+            </div>
+
+            <div class="pews-slider-row">
+              <div class="pews-slider-label">
+                <span>القلب والتروية (Cardiovascular):</span>
+                <span class="val-label" id="pewsCardioLabel">0 (تروية طبيعية &lt; 2 ث)</span>
+              </div>
+              <input type="range" min="0" max="3" value="0" class="pews-range-input" id="pewsCardioSlider" oninput="updatePEWS()">
+            </div>
+
+            <div class="pews-slider-row">
+              <div class="pews-slider-label">
+                <span>السلوك والوعي (Behavior):</span>
+                <span class="val-label" id="pewsBehavLabel">+2 (هائج / متقلب المزاج)</span>
+              </div>
+              <input type="range" min="0" max="3" value="2" class="pews-range-input" id="pewsBehavSlider" oninput="updatePEWS()">
+            </div>
+          </div>
+
+          <!-- Tool 2: Animated Syringe Medication Calculator -->
+          <div class="syringe-card" style="margin-top: 1.25rem;">
+            <div class="card-header" style="margin-bottom: 0.75rem;">
+              <div class="card-title" style="font-size: 0.95rem;">
+                <i class="fa-solid fa-syringe" style="color: var(--medical-teal);"></i>
+                <span>حاسبة الجرعات بالمحاقن الذكية</span>
+              </div>
+              <span class="badge-page" id="syringeDoseBracket">4–10 كجم (2–11 شهر)</span>
+            </div>
+
+            <!-- Medication Select Tabs -->
+            <div class="med-select-tabs">
+              <button class="med-tab-btn active" onclick="selectMedication('amoxicillin')">الأموكسيسيلين (Amoxicillin)</button>
+              <button class="med-tab-btn" onclick="selectMedication('paracetamol')">الباراسيتامول (Paracetamol)</button>
+              <button class="med-tab-btn" onclick="selectMedication('zinc')">مكمل الزنك (Zinc)</button>
+              <button class="med-tab-btn" onclick="selectMedication('vitamin_a')">فيتامين أ (Vitamin A)</button>
+            </div>
+
+            <!-- Syringe Visualization Component -->
+            <div class="syringe-visual-container">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span style="font-size: 0.8rem; font-weight: 800; color: var(--slate-navy);">حجم الجرعة بالمحقنة:</span>
+                <span style="font-size: 1.1rem; font-weight: 900; color: var(--medical-teal-dark);" id="syringeVolumeText">5.0 مل</span>
+              </div>
+
+              <div class="syringe-barrel">
+                <div class="syringe-fill" id="syringeFillEl" style="--syringe-width: 50%;"></div>
+                <div class="syringe-ticks">
+                  <div class="syringe-tick-mark"><div class="tick-line"></div><span class="tick-text">0</span></div>
+                  <div class="syringe-tick-mark"><div class="tick-line"></div><span class="tick-text">2</span></div>
+                  <div class="syringe-tick-mark"><div class="tick-line"></div><span class="tick-text">4</span></div>
+                  <div class="syringe-tick-mark"><div class="tick-line"></div><span class="tick-text">6</span></div>
+                  <div class="syringe-tick-mark"><div class="tick-line"></div><span class="tick-text">8</span></div>
+                  <div class="syringe-tick-mark"><div class="tick-line"></div><span class="tick-text">10</span></div>
+                </div>
+              </div>
+
+              <p style="margin-top: 0.6rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted);" id="syringeInstructions">
+                <i class="fa-solid fa-circle-info" style="color: var(--medical-teal);"></i> 5.0 مل مرتان يومياً لمدة 5 أيام (معلق 125 مجم / 5 مل).
+              </p>
+            </div>
+          </div>
+
+          <!-- Tool 3: Plan C IV Fluid Resuscitation & Metronome -->
+          <div class="iv-calculator-panel" style="margin-top: 1.25rem;">
+            <div class="iv-header-box">
+              <i class="fa-solid fa-truck-medical" style="font-size: 1.4rem; color: var(--emergency-red);"></i>
+              <div>
+                <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--emergency-red-dark);">إنعاش الجفاف الشديد (الخطة ج)</h4>
+                <p style="font-size: 0.75rem; color: var(--text-muted);">محلول رينجر لاكتات وريدي (100 مل/كجم)</p>
+              </div>
+            </div>
+
+            <div class="iv-total-banner">
+              <span>إجمالي المحلول المطلوب:</span>
+              <span id="ivTotalVolText">850 مل على مدار 6 ساعات</span>
+            </div>
+
+            <div class="iv-stages-grid">
+              <div class="iv-stage-card highlight">
+                <h5>المرحلة الأولى (30 مل/كجم)</h5>
+                <p style="font-size: 0.8rem; font-weight: 700;" id="ivStage1Text">255 مل خلال ساعة واحدة</p>
+                <span style="font-size: 0.75rem; color: var(--emergency-red-dark); font-weight: 800;" id="ivStage1Rate">85 قطرة/دقيقة</span>
+              </div>
+              <div class="iv-stage-card">
+                <h5>المرحلة الثانية (70 مل/كجم)</h5>
+                <p style="font-size: 0.8rem; font-weight: 700;" id="ivStage2Text">595 مل خلال 5 ساعات</p>
+                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 800;" id="ivStage2Rate">40 قطرة/دقيقة</span>
+              </div>
+            </div>
+
+            <!-- Interactive Metronome Ticker -->
+            <div class="iv-drip-metronome-box">
+              <div class="drip-visualizer">
+                <div class="drip-chamber" id="dripChamberEl">
+                  <div class="drip-drop"></div>
+                  <div class="drip-liquid"></div>
+                </div>
+                <div>
+                  <span style="font-size: 0.8rem; font-weight: 800; color: var(--slate-navy);">بندول التنقيط الصوتي:</span>
+                  <p style="font-size: 0.75rem; color: var(--text-muted);" id="dripBpmLabel">85 BPM (نبضة صوتية وبصرية)</p>
+                </div>
+              </div>
+              <button class="btn-metronome" id="metronomeToggleBtn" onclick="toggleDripMetronome()">
+                <i class="fa-solid fa-play"></i> تشغيل البندول
+              </button>
+            </div>
+          </div>
+
+          <!-- Tool 4: Respiratory Rate Tap Counter with Animated Lungs -->
+          <div class="respiratory-counter-card" style="margin-top: 1.25rem;">
+            <div class="card-header" style="margin-bottom: 0.5rem;">
+              <div class="card-title" style="font-size: 0.95rem;">
+                <i class="fa-solid fa-lungs" style="color: var(--cyber-cyan);"></i>
+                <span>عداد سرعة التنفس (اضغط مع كل نفس)</span>
+              </div>
+              <span class="badge-page" id="respAgeThreshold">العتبة: ≥50</span>
+            </div>
+
+            <div class="lungs-animation-box" id="lungsBoxEl" onclick="onLungTap()">
+              <i class="fa-solid fa-lungs lungs-icon"></i>
+            </div>
+
+            <div class="resp-stats-row">
+              <div class="resp-stat-item">
+                <h4 id="respCountDisplay">0</h4>
+                <p>عدد الأنفاس المسجلة</p>
+              </div>
+              <div class="resp-stat-item">
+                <h4 id="respTimerDisplay">60s</h4>
+                <p>الوقت المتبقي</p>
+              </div>
+              <div class="resp-stat-item">
+                <h4 id="respStatusDisplay" style="color: var(--safe-emerald-dark); font-size: 1.1rem;">اضغط للبدء</h4>
+                <p>التقييم السريري</p>
+              </div>
+            </div>
+
+            <button class="btn-header" style="width: 100%; justify-content: center;" onclick="resetRespCounter()">
+              <i class="fa-solid fa-rotate-left"></i> إعادة ضبط العداد
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         TAB 2: PARENT / CAREGIVER SMART CHAT
+         ===================================================================== -->
+    <div class="tab-view" id="chat-tab">
+      <div class="chat-container-layout">
+        
+        <!-- Left Sidebar: Quick Clinical Scenarios & Patient Presets -->
+        <div class="chat-sidebar">
+          <div class="card-title" style="font-size: 0.95rem;">
+            <i class="fa-solid fa-bolt" style="color: var(--clinical-amber);"></i>
+            <span>حالات سريرية جاهزة للتجربة:</span>
+          </div>
+          <p style="font-size: 0.75rem; color: var(--text-muted);">
+            اضغط على أي سيناريو لاختبار الفرز السريري الفوري والمحاكي الدلالي:
+          </p>
+
+          <div class="quick-symptom-chips-list">
+            <button class="symptom-chip-btn" onclick="sendPresetQuery('ابني عمره 8 شهور وعنده كحة وسرعة تنفس بقالها يومين')">
+              <span>🫁 كحة وسرعة تنفس (أموكسيسيلين)</span>
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+
+            <button class="symptom-chip-btn" onclick="sendPresetQuery('عنده سخونية عالية بقالها 3 أيام وتشنج مرة ومش قادر يرضع خالص')">
+              <span>🚨 سخونية وتشنجات (علامة خطورة 🔴)</span>
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+
+            <button class="symptom-chip-btn" onclick="sendPresetQuery('بنت عمرها 3 سنين عندها إسهال مائي مستمر وعيونها غائرة وكسلانة')">
+              <span>💧 إسهال وجفاف شديد (الخطة ج 🔴)</span>
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+
+            <button class="symptom-chip-btn" onclick="sendPresetQuery('طفل عنده وجع في ودنه مع صديد خارج من أسبوع والحرارة 38.8')">
+              <span>👂 التهاب الأذن الحاد وألم (أصفر 🟡)</span>
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+
+            <button class="symptom-chip-btn" onclick="sendPresetQuery('رضيع عمره 40 يوم حرارته 35.2 وبيشخر عند الزفير وضعيف الحركة')">
+              <span>👶 رضيع صغير / عدوى وخيمة (PSBI 🔴)</span>
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+
+            <button class="symptom-chip-btn" onclick="sendPresetQuery('عندي صداع شديد وضغط دم مرتفع وعمري 52 سنة')">
+              <span>🛡️ تجربة مصد الأمان (حالة بالغين خارج النطاق)</span>
+              <i class="fa-solid fa-shield-halved" style="color: var(--emergency-red);"></i>
+            </button>
+          </div>
+
+          <div style="margin-top: auto; padding: 0.75rem; background: var(--medical-teal-bg); border-radius: var(--radius-md); font-size: 0.75rem; color: var(--medical-teal-dark);">
+            <i class="fa-solid fa-shield-heart"></i>
+            <strong>الأمان السريري:</strong> يتم فحص كل رسالة عبر 3 مصدات أمان قبل إصدار أي توصية طبية.
+          </div>
+        </div>
+
+        <!-- Right Main Chat Area -->
+        <div class="chat-main-area">
+          
+          <!-- Messages Scroll View -->
+          <div class="chat-messages-scroll" id="chatMessagesContainer">
+            
+            <!-- Welcome Message -->
+            <div class="message-bubble-row assistant">
+              <div class="msg-avatar"><i class="fa-solid fa-robot"></i></div>
+              <div class="msg-bubble">
+                <p><strong>أهلاً بك في مساعد PediaCare.AI الطبي 🩺</strong></p>
+                <p style="margin-top: 0.3rem;">أنا هنا لمساعدتك في تقييم حالة طفلك السريرية بناءً على بروتوكولات منظمة الصحة العالمية (WHO IMCI). يرجى وصف الأعراض بدقة أو اختيار إحدى الحالات الجاهزة على اليمين.</p>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bottom Chat Input Bar with Voice Simulation -->
+          <div class="chat-input-bar">
+            <button class="btn-icon-round btn-mic" id="voiceMicBtn" onclick="toggleVoiceRecording()" title="تسجيل صوتي (محاكاة)">
+              <i class="fa-solid fa-microphone"></i>
+            </button>
+
+            <input type="text" id="chatInputText" class="chat-text-input" placeholder="اكتب شكوى الطفل أو الأعراض هنا..." onkeypress="handleChatEnter(event)">
+
+            <button class="btn-icon-round btn-send" onclick="sendChatMessage()" title="إرسال">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         TAB 3: WHO IMCI EVIDENCE EXPLORER & RAG INSPECTOR
+         ===================================================================== -->
+    <div class="tab-view" id="evidence-tab">
+      <div class="glass-card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title"><i class="fa-solid fa-magnifying-glass-chart" style="color: var(--medical-teal);"></i> مستكشف قاعدة المعرفة والاسترجاع المعزز (Live RAG Inspector)</h3>
+            <p class="card-subtitle">فحص المطابقة الدلالية لمصطلحات البحث، نسبة التشابه (Cosine Similarity %)، ومصدات الأمان</p>
+          </div>
+          <span class="badge-triage green">Cosine Sim &ge; 43.5% Threshold</span>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="rag-search-box">
+          <input type="text" id="ragSearchQuery" class="rag-search-input" placeholder="ابحث في دليل WHO IMCI الطبي (مثال: 'fast breathing pneumonia amoxicillin' أو بالعربية)..." value="Severe pneumonia fast breathing chest indrawing">
+          <button class="btn-header primary" onclick="runRAGSearch()">
+            <i class="fa-solid fa-magnifying-glass"></i> بحث دلالي
+          </button>
+        </div>
+
+        <!-- Retrieval Results List -->
+        <div class="evidence-cards-list" id="evidenceResultsContainer">
+          <!-- Populated by JavaScript -->
+        </div>
+
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         TAB 4: SYMPTOM TIMELINE & PATIENT RECORDS
+         ===================================================================== -->
+    <div class="tab-view" id="timeline-tab">
+      <div class="glass-card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color: var(--cyber-cyan);"></i> الخط الزمني لتطور أعراض الطفل</h3>
+            <p class="card-subtitle">متابعة مسار المرض، استجابة الطفل للمضاد الحيوي/السوائل، ومواعيد المتابعة السريرية</p>
+          </div>
+          <button class="btn-header" onclick="addNewTimelineEntry()">
+            <i class="fa-solid fa-plus"></i> إضافة تحديث سريري جديد
+          </button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;" id="timelineEntriesList">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         TAB 5: CLINICAL BENCHMARK & EVALUATION SUITE
+         ===================================================================== -->
+    <div class="tab-view" id="benchmark-tab">
+      <div class="glass-card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title"><i class="fa-solid fa-square-poll-vertical" style="color: var(--medical-teal);"></i> لوحة الاختبارات المعيارية والتقييم السريري (Clinical Benchmark Suite)</h3>
+            <p class="card-subtitle">مقارنة أداء المحركات السريرية، قياس زمن الاستجابة (Latency)، ودقة مصدات الأمان للأطفال والبالغين</p>
+          </div>
+          <button class="btn-header primary" onclick="runLiveBenchmarkTest()">
+            <i class="fa-solid fa-play"></i> إعادة تشغيل الاختبارات المعيارية
+          </button>
+        </div>
+
+        <table class="benchmark-table">
+          <thead>
+            <tr>
+              <th>معرّف الحالة (Test ID)</th>
+              <th>السيناريو السريري</th>
+              <th>نسبة التطابق الدلالي</th>
+              <th>زمن الاستجابة</th>
+              <th>الصفحة المستشهد بها</th>
+              <th>القرار السريري</th>
+            </tr>
+          </thead>
+          <tbody id="benchmarkTableBody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+
+        <div style="margin-top: 1.5rem; padding: 1rem; background: var(--surface-subtle); border-radius: var(--radius-md); font-size: 0.85rem;">
+          <strong>💡 ملخص نتائج التقييم المعياري:</strong>
+          <ul style="margin-top: 0.5rem; padding-right: 1.25rem;">
+            <li><strong>تطابق دقيق 100%:</strong> تم استرجاع نفس الصفحات الرسمية لكافة حالات الأطفال الشديدة (صفحة 16، 23، 35، 49).</li>
+            <li><strong>مصد الأمان السريري:</strong> الحالات خارج النطاق (أمراض البالغين) حققت تطابق 23.9% فقط، وتم رفضها تلقائياً لأنها أقل من عتبة الأمان (43.5%).</li>
+            <li><strong>سرعة الاستجابة:</strong> متوسط زمن الاستجابة للمحرك المحلي هو 240 مللي ثانية مع ضمان صفر انقطاع.</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         TAB 6: ARCHITECTURE & CLINICAL EXPLAINABILITY
+         ===================================================================== -->
+    <div class="tab-view" id="architecture-tab">
+      <div class="glass-card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title"><i class="fa-solid fa-diagram-project" style="color: var(--medical-teal);"></i> الهيكل المعماري ومصدات الأمان السريرية الثلاثية</h3>
+            <p class="card-subtitle">كيف يضمن نظام PediaCare.AI تقديم رعاية موثوقة ومطابقة 100% لإرشادات WHO IMCI بدون هلوسة</p>
+          </div>
+        </div>
+
+        <div class="dashboard-grid" style="margin-top: 1rem;">
+          
+          <div class="col-4">
+            <div style="background: var(--safe-emerald-bg); border: 1px solid var(--safe-emerald-border); border-radius: var(--radius-lg); padding: 1.25rem; height: 100%;">
+              <h4 style="color: var(--safe-emerald-dark); font-size: 0.95rem; font-weight: 800; margin-bottom: 0.5rem;">
+                <i class="fa-solid fa-shield-halved"></i> 1. مصد الحدود والأمان الأولي (Check 1)
+              </h4>
+              <p style="font-size: 0.83rem; color: #334155; line-height: 1.6;">
+                فحص عمر ووزن الطفل والكلمات المفتاحية لاستبعاد حالات البالغين (عمر &gt; 5 سنوات أو وزن &gt; 25 كجم)، وتوجيه الحالات الحرجة فوراً دون تأخير.
+              </p>
+            </div>
+          </div>
+
+          <div class="col-4">
+            <div style="background: var(--cyber-cyan-bg); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: var(--radius-lg); padding: 1.25rem; height: 100%;">
+              <h4 style="color: var(--medical-teal-dark); font-size: 0.95rem; font-weight: 800; margin-bottom: 0.5rem;">
+                <i class="fa-solid fa-crosshairs"></i> 2. بوابة ثقة الاسترجاع الدلالي (Check 2)
+              </h4>
+              <p style="font-size: 0.83rem; color: #334155; line-height: 1.6;">
+                احتساب المسافة الإقليدية وتشابه جيب التمام (Cosine Sim). في حال كان التشابه أقل من 43.5%، يتم رفض السؤال لعدم توفر سند طبي موثوق في الدليل.
+              </p>
+            </div>
+          </div>
+
+          <div class="col-4">
+            <div style="background: var(--clinical-amber-bg); border: 1px solid var(--clinical-amber-border); border-radius: var(--radius-lg); padding: 1.25rem; height: 100%;">
+              <h4 style="color: var(--clinical-amber-dark); font-size: 0.95rem; font-weight: 800; margin-bottom: 0.5rem;">
+                <i class="fa-solid fa-clipboard-check"></i> 3. التحقق البعدي من الادعاءات (Check 3)
+              </h4>
+              <p style="font-size: 0.83rem; color: #334155; line-height: 1.6;">
+                مطابقة كل جرعة دواء وتوصية علاجية مع النص المسترجع والصفحة المقتبسة لضمان عدم حدوث أي اختلاق أو خطأ في الجرعات.
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Zero Downtime Multi-Model Fallback Diagram -->
+        <div style="margin-top: 1.5rem; background: var(--slate-navy-dark); color: white; border-radius: var(--radius-lg); padding: 1.5rem;">
+          <h4 style="color: var(--cyber-cyan-light); font-size: 1rem; font-weight: 800; margin-bottom: 0.75rem;">
+            <i class="fa-solid fa-server"></i> هيكل التبديل التلقائي لضمان صفر انقطاع (Zero-Downtime Multi-Model Fallback)
+          </h4>
+          <p style="font-size: 0.85rem; color: #94A3B8; margin-bottom: 1rem;">
+            عند حدوث أي ضغط على خوادم الذكاء الاصطناعي (أخطاء 503 UNAVAILABLE أو 429 Rate Limit)، يقوم النظام فوراً بالتبديل التلقائي بين الموديلات:
+          </p>
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <span style="background: var(--medical-teal-dark); padding: 0.4rem 0.8rem; border-radius: var(--radius-md); font-weight: 700; font-size: 0.85rem;">1. Gemini 3.5 Flash (Primary)</span>
+            <i class="fa-solid fa-arrow-left" style="color: var(--cyber-cyan);"></i>
+            <span style="background: #1E293B; padding: 0.4rem 0.8rem; border-radius: var(--radius-md); font-weight: 700; font-size: 0.85rem;">2. Gemini 3.7 Flash</span>
+            <i class="fa-solid fa-arrow-left" style="color: var(--cyber-cyan);"></i>
+            <span style="background: #1E293B; padding: 0.4rem 0.8rem; border-radius: var(--radius-md); font-weight: 700; font-size: 0.85rem;">3. Gemini 3.1 Flash Lite</span>
+            <i class="fa-solid fa-arrow-left" style="color: var(--cyber-cyan);"></i>
+            <span style="background: var(--safe-emerald-dark); padding: 0.4rem 0.8rem; border-radius: var(--radius-md); font-weight: 700; font-size: 0.85rem;">4. Offline IMCI Engine (Zero Network)</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- =======================================================================
+       4. Medical Case Summary & QR Code Modal Dialog
+       ======================================================================= -->
+  <div class="tour-modal-overlay" id="summaryModalOverlay">
+    <div class="tour-modal-card">
+      <div class="card-header" style="margin-bottom: 1rem;">
+        <div class="card-title">
+          <i class="fa-solid fa-file-invoice-medical" style="color: var(--medical-teal);"></i>
+          <span>التقرير السريري المعتمد ورمز الـ QR</span>
+        </div>
+        <button class="btn-header" onclick="closeSummaryModal()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center;">
+        <!-- QR Code Container -->
+        <div style="background: white; padding: 1rem; border: 1px solid var(--border-light); border-radius: var(--radius-lg); text-align: center;">
+          <div id="qrcodeDisplay" style="margin: 0 auto; width: 160px; height: 160px;"></div>
+          <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; display: block; margin-top: 0.5rem;">امسح بالهاتف للمشاركة</span>
+        </div>
+
+        <!-- Case Summary Text -->
+        <div style="flex: 1; min-width: 260px;" id="caseSummaryDetails">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="tour-modal-footer">
+        <button class="btn-header" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة التقرير</button>
+        <button class="btn-header primary" onclick="closeSummaryModal()">تم</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       5. Interactive Step-by-Step Guided Tour Modal
+       ======================================================================= -->
+  <div class="tour-modal-overlay" id="tourModalOverlay">
+    <div class="tour-modal-card">
+      
+      <div class="tour-step-indicator" id="tourStepIndicators">
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+      </div>
+
+      <div id="tourStepContent">
+        <!-- Injected dynamically by JS -->
+      </div>
+
+      <div class="tour-modal-footer">
+        <button class="btn-header" id="tourPrevBtn" onclick="prevTourStep()"><i class="fa-solid fa-arrow-right"></i> السابق</button>
+        <div style="font-size: 0.85rem; font-weight: 800; color: var(--text-muted);" id="tourStepCounter">خطوة 1 من 5</div>
+        <button class="btn-header primary" id="tourNextBtn" onclick="nextTourStep()">التالي <i class="fa-solid fa-arrow-left"></i></button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       6. Footer & Clinical Disclaimer
+       ======================================================================= -->
+  <footer class="main-footer">
+    <p>
+      🛡️ <strong>إخلاء مسؤولية سريري:</strong> هذا النظام مخصص لدعم القرار السريري والتقييم الأكاديمي والفرز بناءً على إرشادات منظمة الصحة العالمية (WHO IMCI). لا يعد بديلاً عن التشخيص السريري المباشر أو إشراف الطبيب المختص.
+    </p>
+    <p style="margin-top: 0.35rem; font-size: 0.75rem; color: var(--text-light);">
+      PediaCare.AI CDSS v1.0.0 — Grounded in WHO IMCI Model Handbook (142 Pages) • ChromaDB Local &amp; Pinecone Cloud Vectors
+    </p>
+  </footer>
+
+  <!-- =======================================================================
+       6. Cinematic Floating Presentation & Narrative Bar
+       ======================================================================= -->
+  <div class="cinematic-story-bar" id="cinematicStoryBar">
+    <div class="cinematic-top-row">
+      <div class="cinematic-badge-tag" id="cinematicSceneBadge">
+        <i class="fa-solid fa-film"></i> <span id="cinematicSceneNum">المشهد 1 من 9</span>
+      </div>
+      <div class="cinematic-title-text" id="cinematicSceneTitle">
+        🏥 فحص الجهاز التنفسي والتهاب الرئة
+      </div>
+      <button class="btn-cinematic-action" onclick="stopCinematicDemo()" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4);">
+        <i class="fa-solid fa-xmark"></i> إنهاء العرض
+      </button>
+    </div>
+
+    <div class="cinematic-desc-text" id="cinematicSceneDesc">
+      جاري بدء الرحلة السريرية التفاعلية...
+    </div>
+
+    <div class="cinematic-controls-row">
+      <button class="btn-cinematic-action" onclick="prevCinematicScene()">
+        <i class="fa-solid fa-arrow-right"></i> السابق
+      </button>
+
+      <div class="cinematic-progress-track">
+        <div class="cinematic-progress-fill" id="cinematicProgressFill"></div>
+      </div>
+
+      <button class="btn-cinematic-action primary" id="cinematicPlayPauseBtn" onclick="toggleCinematicPause()">
+        <i class="fa-solid fa-pause"></i> إيقاف مؤقت
+      </button>
+      <button class="btn-cinematic-action" onclick="nextCinematicScene()">
+        التالي <i class="fa-solid fa-arrow-left"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Application Logic Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>

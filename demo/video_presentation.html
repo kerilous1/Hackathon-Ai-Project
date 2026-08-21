@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PediaCare.AI — Cinematic Video Presentation Showcase (60-75s)</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Outfit:wght@500;600;700;800;900&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- QRCode.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    :root {
+      --slate-bg-dark: #070F1E;
+      --slate-navy: #0A192F;
+      --medical-teal: #0D9488;
+      --medical-teal-light: #14B8A6;
+      --cyber-cyan: #06B6D4;
+      --cyber-cyan-light: #22D3EE;
+      --emergency-red: #EF4444;
+      --clinical-amber: #F59E0B;
+      --safe-emerald: #10B981;
+      --text-white: #FFFFFF;
+      --text-muted: #94A3B8;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at center, #0F2342 0%, #070F1E 100%);
+      color: var(--text-white);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    /* Ambient Background Glow */
+    .ambient-glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(13, 148, 136, 0.18) 0%, rgba(6, 182, 212, 0.05) 50%, transparent 70%);
+      pointer-events: none;
+      filter: blur(40px);
+      z-index: 1;
+      animation: pulseGlow 8s infinite alternate ease-in-out;
+    }
+
+    @keyframes pulseGlow {
+      0% { transform: scale(0.9) translate(-50px, -50px); }
+      100% { transform: scale(1.15) translate(50px, 50px); }
+    }
+
+    /* Cinematic Stage Container */
+    .stage-container {
+      position: relative;
+      width: 100%;
+      max-width: 1280px;
+      height: 720px;
+      max-height: 90vh;
+      background: rgba(10, 25, 47, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 28px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(20px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      perspective: 1400px;
+      overflow: hidden;
+    }
+
+    /* Top Video HUD */
+    .video-top-hud {
+      position: absolute;
+      top: 20px;
+      left: 30px;
+      right: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+    }
+
+    .brand-hud {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon-box {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--medical-teal), var(--cyber-cyan));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+    }
+
+    .brand-hud h2 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-hud h2 span {
+      color: var(--cyber-cyan-light);
+    }
+
+    .timecode-hud {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 6px 16px;
+      border-radius: 99px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .rec-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--emergency-red);
+      font-size: 0.75rem;
+    }
+
+    .rec-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--emergency-red);
+      border-radius: 50%;
+      animation: blinkRec 1s infinite;
+    }
+
+    @keyframes blinkRec {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* 3D Mobile Device Mockup */
+    .device-mockup-wrapper {
+      width: 380px;
+      height: 640px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1), filter 0.5s ease;
+      transform: rotateY(-8deg) rotateX(4deg) scale(0.95);
+    }
+
+    .device-mockup-wrapper.centered {
+      transform: rotateY(0deg) rotateX(0deg) scale(1);
+    }
+
+    .device-mockup-wrapper.zoomed {
+      transform: rotateY(0deg) rotateX(0deg) scale(1.22) translateY(-20px);
+    }
+
+    .device-mockup-wrapper.tilted-left {
+      transform: rotateY(12deg) rotateX(6deg) scale(0.98);
+    }
+
+    .device-mockup-wrapper.outro-multi {
+      transform: rotateY(-18deg) rotateX(10deg) scale(0.85) translateX(140px);
+    }
+
+    .device-chassis {
+      width: 100%;
+      height: 100%;
+      background: #0B132B;
+      border-radius: 46px;
+      padding: 12px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 0 4px #1E293B, inset 0 0 0 2px rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .device-screen {
+      width: 100%;
+      height: 100%;
+      background: #F8FAFC;
+      border-radius: 36px;
+      color: #0F172A;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .device-notch {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 110px;
+      height: 24px;
+      background: #0B132B;
+      border-radius: 12px;
+      z-index: 100;
+    }
+
+    /* Screen UI Components */
+    .screen-header {
+      padding: 38px 16px 10px 16px;
+      background: white;
+      border-bottom: 1px solid #E2E8F0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .screen-body {
+      flex: 1;
+      padding: 14px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Dynamic Mockup Floating Card Layers for Outro */
+    .floating-card-bg-1, .floating-card-bg-2 {
+      position: absolute;
+      width: 380px;
+      height: 640px;
+      background: #0F172A;
+      border-radius: 46px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 1s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .floating-card-bg-1 {
+      transform: translate3d(-180px, -30px, -120px) rotateY(-15deg);
+    }
+
+    .floating-card-bg-2 {
+      transform: translate3d(200px, 40px, -200px) rotateY(-22deg);
+    }
+
+    .stage-container.show-outro .floating-card-bg-1 {
+      opacity: 0.75;
+    }
+    .stage-container.show-outro .floating-card-bg-2 {
+      opacity: 0.55;
+    }
+
+    /* Lower-Third Storyboard Overlay */
+    .lower-third-banner {
+      position: absolute;
+      bottom: 24px;
+      left: 40px;
+      right: 40px;
+      background: rgba(7, 15, 30, 0.9);
+      border: 1.5px solid rgba(6, 182, 212, 0.4);
+      border-radius: 20px;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(6, 182, 212, 0.2);
+      z-index: 150;
+      transform: translateY(0);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .lower-third-content {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .scene-timestamp-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--cyber-cyan-light);
+      background: rgba(6, 182, 212, 0.15);
+      padding: 2px 10px;
+      border-radius: 99px;
+      width: fit-content;
+    }
+
+    .scene-headline {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: #FFFFFF;
+    }
+
+    .scene-subtext {
+      font-size: 0.85rem;
+      color: #CBD5E1;
+      font-weight: 600;
+    }
+
+    /* Cursor / Touch Ripple Simulation */
+    .touch-cursor {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid var(--medical-teal);
+      box-shadow: 0 0 15px rgba(13, 148, 136, 0.8);
+      pointer-events: none;
+      z-index: 500;
+      opacity: 0;
+      transform: translate(-50%, -50%);
+      transition: left 0.6s cubic-bezier(0.25, 1, 0.5, 1), top 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
+    }
+
+    .touch-cursor.tapped {
+      animation: rippleEffect 0.5s ease-out forwards;
+    }
+
+    @keyframes rippleEffect {
+      0% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.8); }
+      100% { transform: translate(-50%, -50%) scale(1.8); box-shadow: 0 0 0 25px rgba(255, 255, 255, 0); }
+    }
+
+    /* Video Control Bottom Bar */
+    .video-controls-bar {
+      position: absolute;
+      bottom: -60px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 200;
+    }
+
+    .btn-ctrl {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s ease;
+    }
+
+    .btn-ctrl:hover {
+      background: var(--medical-teal);
+      border-color: var(--cyber-cyan);
+      transform: translateY(-2px);
+    }
+
+    /* Custom UI widgets within screen */
+    .ui-chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .ui-chip {
+      padding: 6px 12px;
+      background: #F1F5F9;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #334155;
+      border: 1px solid #E2E8F0;
+      transition: all 0.3s ease;
+    }
+
+    .ui-chip.selected {
+      background: #0D9488;
+      color: white;
+      border-color: #0D9488;
+      box-shadow: 0 3px 8px rgba(13, 148, 136, 0.3);
+    }
+
+    .ui-triage-card {
+      background: #FEF2F2;
+      border: 1.5px solid #FECACA;
+      border-radius: 16px;
+      padding: 12px;
+      color: #DC2626;
+      animation: popCard 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes popCard {
+      0% { transform: scale(0.85); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .ui-syringe-visual {
+      height: 36px;
+      background: #F1F5F9;
+      border: 1.5px solid #94A3B8;
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .ui-syringe-fluid {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #0D9488, #06B6D4);
+      transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .ui-pews-meter {
+      height: 48px;
+      border-radius: 12px;
+      background: #ECFDF5;
+      border: 1.5px solid #A7F3D0;
+      color: #059669;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-weight: 800;
+      font-size: 0.85rem;
+      transition: all 0.5s ease;
+    }
+
+    .ui-pews-meter.danger {
+      background: #FEF2F2;
+      border-color: #EF4444;
+      color: #DC2626;
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Glow -->
+  <div class="ambient-glow"></div>
+
+  <!-- Cinematic Video Stage -->
+  <div class="stage-container" id="videoStage">
+    
+    <!-- Top HUD Elements -->
+    <div class="video-top-hud">
+      <div class="brand-hud">
+        <div class="brand-icon-box">
+          <i class="fa-solid fa-stethoscope"></i>
+        </div>
+        <h2>PediaCare<span>.AI</span> <small style="font-size: 0.7rem; font-weight: 600; color: #94A3B8;">WHO IMCI CDSS</small></h2>
+      </div>
+
+      <div class="timecode-hud">
+        <div class="rec-indicator">
+          <div class="rec-dot"></div> REC
+        </div>
+        <span id="timecodeDisplay">00:00 / 01:10</span>
+      </div>
+    </div>
+
+    <!-- Background 3D Floating Mockups (For Outro) -->
+    <div class="floating-card-bg-1"></div>
+    <div class="floating-card-bg-2"></div>
+
+    <!-- Main 3D Phone Mockup Container -->
+    <div class="device-mockup-wrapper" id="deviceMockup">
+      <div class="device-chassis">
+        <div class="device-screen" id="phoneScreen">
+          <div class="device-notch"></div>
+          
+          <!-- Screen Header -->
+          <div class="screen-header">
+            <div style="font-weight: 800; font-size: 0.85rem; color: #0F172A; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-heart-pulse" style="color: #0D9488;"></i> PediaCare.AI
+            </div>
+            <div id="screenHeaderBadge" style="font-size: 0.7rem; font-weight: 800; background: #ECFDF5; color: #059669; padding: 2px 8px; border-radius: 99px; border: 1px solid #A7F3D0;">
+              ⚡ Offline IMCI Engine
+            </div>
+          </div>
+
+          <!-- Dynamic Screen Body Content -->
+          <div class="screen-body" id="screenContent">
+            <!-- Dynamically populated scene by scene -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Touch Pointer Simulation -->
+    <div class="touch-cursor" id="touchCursor"></div>
+
+    <!-- Lower Third Storyboard Overlay -->
+    <div class="lower-third-banner" id="lowerThird">
+      <div class="lower-third-content">
+        <div class="scene-timestamp-pill" id="sceneTimePill">0:00 - 0:08 • The Hook &amp; Dual Persona</div>
+        <div class="scene-headline" id="sceneHeadline">نظام دعم القرار السريري الذكي لطب الأطفال</div>
+        <div class="scene-subtext" id="sceneSubtext">المعتمد على بروتوكولات منظمة الصحة العالمية (WHO IMCI Guidelines)</div>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn-ctrl" onclick="togglePlayPause()" id="playPauseBtn">
+          <i class="fa-solid fa-pause"></i>
+        </button>
+        <button class="btn-ctrl" onclick="restartVideo()">
+          <i class="fa-solid fa-rotate-left"></i>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Global Controls -->
+  <div class="video-controls-bar">
+    <button class="btn-ctrl" onclick="toggleAudio()" id="audioBtn">
+      <i class="fa-solid fa-volume-high"></i> الصوت: نشط
+    </button>
+    <button class="btn-ctrl" onclick="toggleFullscreen()">
+      <i class="fa-solid fa-expand"></i> ملء الشاشة
+    </button>
+    <a href="index.html" class="btn-ctrl" style="text-decoration: none;">
+      <i class="fa-solid fa-arrow-left"></i> العودة للوحة التحكم
+    </a>
+  </div>
+
+  <script>
+    // =========================================================================
+    // Precise Video Storyboard Execution Engine (60 - 75s)
+    // =========================================================================
+
+    let currentTimeSeconds = 0;
+    let isPlaying = true;
+    let isAudioEnabled = true;
+    let videoTimer = null;
+    let audioCtx = null;
+
+    // Storyboard Scene Definitions
+    const STORYBOARD_TIMELINE = [
+      {
+        start: 0,
+        end: 8,
+        pill: "0:00 - 0:08 • The Hook & Dual Persona",
+        headline: "نظام دعم القرار السريري الذكي لطب الأطفال",
+        subtext: "المعتمد على بروتوكولات منظمة الصحة العالمية (WHO IMCI Guidelines)",
+        setup: () => {
+          setDeviceTransform("tilted-left");
+          renderRoleSelectionScreen();
+          playChimeSound(520, 0.1);
+        }
+      },
+      {
+        start: 8,
+        end: 25,
+        pill: "0:08 - 0:25 • AI Triage & Local Engine",
+        headline: "Offline Local CDSS • فرز سريري فوري ودقيق 100%",
+        subtext: "تقييم حالة الطفل زياد وفحص أعراض الالتهاب الرئوي بدون الحاجة للإنترنت",
+        setup: () => {
+          setDeviceTransform("centered");
+          renderPatientTriageScreen();
+          simulateTouchTap(180, 220, () => {
+            selectSymptomChip(0);
+          });
+          setTimeout(() => {
+            simulateTouchTap(240, 260, () => {
+              selectSymptomChip(1);
+              triggerRedTriageResult();
+            });
+          }, 4000);
+        }
+      },
+      {
+        start: 25,
+        end: 40,
+        pill: "0:25 - 0:40 • Evidence Grounding & SBAR",
+        headline: "100% Medical Grounding • تقرير SBAR ورمز الطوارئ QR",
+        subtext: "توثيق برقم الصفحة (Page 23) وتوليد كود مشفر لنقل بيانات الحالة للمستشفى",
+        setup: () => {
+          setDeviceTransform("zoomed");
+          renderEvidenceAndSBARScreen();
+          playChimeSound(680, 0.15);
+        }
+      },
+      {
+        start: 40,
+        end: 60,
+        pill: "0:40 - 0:60 • Clinician Power Tools",
+        headline: "Interactive Calculators • المحقنة الذكية وبندول التنقيط ومقياس PEWS",
+        subtext: "حساب جرعات دقيقة، تنظيم قطرات رينجر لاكتات، ورصد تدهور العلامات الحيوية",
+        setup: () => {
+          setDeviceTransform("centered");
+          renderClinicianToolsScreen();
+          setTimeout(() => {
+            animateSyringeFill(5.0);
+            startDripSoundPulse();
+          }, 2000);
+          setTimeout(() => {
+            triggerPewsRedAlarm();
+          }, 8000);
+        }
+      },
+      {
+        start: 60,
+        end: 72,
+        pill: "0:60 - 0:70 • Outro & Key Value",
+        headline: "PediaCare.AI — سد الفجوة بين بروتوكولات الطوارئ والرعاية الفورية",
+        subtext: "ذكاء اصطناعي سريري موثوق، آمن 100%، وخالٍ من الهلوسة الطبية",
+        setup: () => {
+          setDeviceTransform("outro-multi");
+          renderOutroScreen();
+          playChimeSound(880, 0.25);
+        }
+      }
+    ];
+
+    function setDeviceTransform(className) {
+      const el = document.getElementById("deviceMockup");
+      const stage = document.getElementById("videoStage");
+      el.className = "device-mockup-wrapper " + className;
+      if (className === "outro-multi") {
+        stage.classList.add("show-outro");
+      } else {
+        stage.classList.remove("show-outro");
+      }
+    }
+
+    // Screen Renderers
+    function renderRoleSelectionScreen() {
+      const content = document.getElementById("screenContent");
+      content.innerHTML = `
+        <div style="text-align: center; margin: 20px 0 10px 0;">
+          <div style="width: 54px; height: 54px; background: linear-gradient(135deg, #0D9488, #06B6D4); border-radius: 16px; margin: 0 auto 10px auto; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 6px 15px rgba(13, 148, 136, 0.3);">
+            <i class="fa-solid fa-stethoscope"></i>
+          </div>
+          <h3 style="font-weight: 800; font-size: 1.1rem; color: #0F172A;">اختر نوع الحساب السريري</h3>
+          <p style="font-size: 0.75rem; color: #64748B;">Clinical Role Selection</p>
+        </div>
+
+        <div style="background: white; border: 2px solid #0D9488; border-radius: 16px; padding: 14px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.15);">
+          <div style="width: 40px; height: 40px; border-radius: 10px; background: #ECFDF5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+            <i class="fa-solid fa-user-doctor"></i>
+          </div>
+          <div>
+            <h4 style="font-size: 0.9rem; font-weight: 800; color: #0F172A;">طبيب أطفال / Clinician</h4>
+            <p style="font-size: 0.7rem; color: #64748B;">محطة العمل، الحواسب، وبروتوكولات WHO</p>
+          </div>
+        </div>
+
+        <div style="background: white; border: 1px solid #E2E8F0; border-radius: 16px; padding: 14px; display: flex; align-items: center; gap: 12px;">
+          <div style="width: 40px; height: 40px; border-radius: 10px; background: #F1F5F9; color: #64748B; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+            <i class="fa-solid fa-hands-holding-child"></i>
+          </div>
+          <div>
+            <h4 style="font-size: 0.9rem; font-weight: 800; color: #0F172A;">ولي أمر / Caregiver</h4>
+            <p style="font-size: 0.7rem; color: #64748B;">فرز ذكي للأعراض وإرشادات طارئة</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPatientTriageScreen() {
+      const content = document.getElementById("screenContent");
+      content.innerHTML = `
+        <div style="background: white; border: 1px solid #E2E8F0; border-radius: 14px; padding: 10px; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.4rem;">👶</span>
+            <div>
+              <h4 style="font-size: 0.85rem; font-weight: 800;">زياد كريم (Ziyad)</h4>
+              <p style="font-size: 0.7rem; color: #64748B;">8 شهور • 8.5 كجم • ذكر</p>
+            </div>
+          </div>
+          <span style="font-size: 0.7rem; font-weight: 800; background: #FEF3C7; color: #D97706; padding: 2px 6px; border-radius: 6px;">عتبة: ≥50</span>
+        </div>
+
+        <div>
+          <span style="font-size: 0.75rem; font-weight: 800; color: #475569; display: block; margin-bottom: 6px;">الأعراض الملحوظة (Symptom Chips):</span>
+          <div class="ui-chip-group">
+            <div class="ui-chip" id="chip0">🫁 كحة وسعال مستمر</div>
+            <div class="ui-chip" id="chip1">⚡ سرعة تنفس 54 نفس/د</div>
+            <div class="ui-chip">🌡️ حرارة 38.8°C</div>
+            <div class="ui-chip">🍼 صعوبة خفيفة بالرضاعة</div>
+          </div>
+        </div>
+
+        <div id="triageResultSlot"></div>
+      `;
+    }
+
+    function selectSymptomChip(idx) {
+      const chip = document.getElementById(`chip${idx}`);
+      if (chip) {
+        chip.classList.add("selected");
+        playClickSound();
+      }
+    }
+
+    function triggerRedTriageResult() {
+      const slot = document.getElementById("triageResultSlot");
+      slot.innerHTML = `
+        <div class="ui-triage-card">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <strong style="font-size: 0.85rem;"><i class="fa-solid fa-triangle-exclamation"></i> 🔴 فرز طارئ: التهاب رئوي وخيم</strong>
+            <span style="font-size: 0.65rem; background: #DC2626; color: white; padding: 1px 6px; border-radius: 4px;">Urgent</span>
+          </div>
+          <p style="font-size: 0.72rem; color: #991B1B; line-height: 1.4;">
+            تنفس سريع (54 > 50). يوصى بإعطاء جرعة أموكسيسيلين تحويلية أولى مع الإحالة العاجلة للمستشفى.
+          </p>
+        </div>
+      `;
+      playChimeSound(440, 0.2);
+    }
+
+    function renderEvidenceAndSBARScreen() {
+      const content = document.getElementById("screenContent");
+      content.innerHTML = `
+        <div style="background: white; border: 1px solid #E2E8F0; border-radius: 14px; padding: 10px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <strong style="font-size: 0.8rem; color: #0D9488;"><i class="fa-solid fa-book-bookmark"></i> سند منظمة الصحة (WHO IMCI)</strong>
+            <span style="font-size: 0.7rem; font-weight: 800; background: #ECFDF5; color: #059669; padding: 1px 6px; border-radius: 4px;">ص 23 (Page 23)</span>
+          </div>
+          <p style="font-size: 0.72rem; color: #334155; line-height: 1.4; background: #F8FAFC; padding: 6px; border-radius: 6px; border-right: 3px solid #0D9488;">
+            "If fast breathing is present (≥50 in 2-11m): Classify as PNEUMONIA. Give oral amoxicillin."
+          </p>
+        </div>
+
+        <div style="background: white; border: 1px solid #E2E8F0; border-radius: 14px; padding: 10px; text-align: center;">
+          <div style="font-weight: 800; font-size: 0.8rem; margin-bottom: 6px;">تقرير تسليم الحالة السريري (SBAR QR Code)</div>
+          <div id="screenQrSlot" style="width: 100px; height: 100px; margin: 0 auto; background: white; padding: 4px;"></div>
+          <span style="font-size: 0.65rem; color: #64748B; display: block; margin-top: 4px;">امسح الكود فوراً في قسم الطوارئ</span>
+        </div>
+      `;
+
+      // Generate instant QR Code
+      setTimeout(() => {
+        new QRCode(document.getElementById("screenQrSlot"), {
+          text: "PediaCare-SBAR: Ziyad (8m, 8.5kg) - Severe Pneumonia - Triage RED - Ref: WHO Page 23",
+          width: 92,
+          height: 92,
+          colorDark: "#0F172A",
+          colorLight: "#FFFFFF",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      }, 100);
+    }
+
+    function renderClinicianToolsScreen() {
+      const content = document.getElementById("screenContent");
+      content.innerHTML = `
+        <!-- 1. Syringe Dosing -->
+        <div style="background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 8px;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 800; margin-bottom: 4px;">
+            <span>💉 محقنة الأموكسيسيلين (8.5 كجم)</span>
+            <span style="color: #0D9488;" id="fluidDoseLabel">5.0 مل</span>
+          </div>
+          <div class="ui-syringe-visual">
+            <div class="ui-syringe-fluid" id="syringeFluidBar"></div>
+          </div>
+        </div>
+
+        <!-- 2. IV Drip Plan C -->
+        <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 12px; padding: 8px;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 800; color: #DC2626; margin-bottom: 4px;">
+            <span>💧 إنعاش الجفاف (الخطة ج)</span>
+            <span>85 قطرة/د</span>
+          </div>
+          <p style="font-size: 0.7rem; color: #991B1B;">محلول رينجر لاكتات 850 مل • وميض البندول نشط</p>
+        </div>
+
+        <!-- 3. PEWS Score -->
+        <div class="ui-pews-meter" id="pewsMeterBox">
+          <span>📈 مقياس الإنذار المبكر (PEWS)</span>
+          <span id="pewsScoreLabel">درجة: 2 (مستقر 🟢)</span>
+        </div>
+      `;
+    }
+
+    function animateSyringeFill(vol) {
+      const bar = document.getElementById("syringeFluidBar");
+      if (bar) {
+        bar.style.width = "50%";
+        playClickSound();
+      }
+    }
+
+    function triggerPewsRedAlarm() {
+      const box = document.getElementById("pewsMeterBox");
+      const label = document.getElementById("pewsScoreLabel");
+      if (box && label) {
+        box.classList.add("danger");
+        label.textContent = "درجة: 6 (تدهور وشيك 🔴)";
+        playChimeSound(320, 0.3);
+      }
+    }
+
+    function renderOutroScreen() {
+      const content = document.getElementById("screenContent");
+      content.innerHTML = `
+        <div style="text-align: center; margin: 40px 0;">
+          <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #0D9488, #06B6D4); border-radius: 20px; margin: 0 auto 12px auto; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem; box-shadow: 0 10px 25px rgba(6, 182, 212, 0.4);">
+            <i class="fa-solid fa-shield-heart"></i>
+          </div>
+          <h3 style="font-weight: 900; font-size: 1.25rem; color: #0F172A;">PediaCare<span style="color: #0D9488;">.AI</span></h3>
+          <p style="font-size: 0.8rem; color: #64748B; margin-top: 4px;">رعاية سريرية فورية للأطفال</p>
+        </div>
+      `;
+    }
+
+    function simulateTouchTap(x, y, callback) {
+      const cursor = document.getElementById("touchCursor");
+      cursor.style.left = `${x}px`;
+      cursor.style.top = `${y}px`;
+      cursor.style.opacity = "1";
+
+      setTimeout(() => {
+        cursor.classList.add("tapped");
+        if (typeof callback === "function") callback();
+      }, 600);
+
+      setTimeout(() => {
+        cursor.classList.remove("tapped");
+        cursor.style.opacity = "0";
+      }, 1200);
+    }
+
+    // =========================================================================
+    // Web Audio Synthesizer for Minimal Tech Sound Design
+    // =========================================================================
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+    }
+
+    function playClickSound() {
+      if (!isAudioEnabled) return;
+      initAudio();
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.04);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.05);
+      } catch (e) {}
+    }
+
+    function playChimeSound(freq = 600, dur = 0.15) {
+      if (!isAudioEnabled) return;
+      initAudio();
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.5, audioCtx.currentTime + dur);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + dur + 0.02);
+      } catch (e) {}
+    }
+
+    function startDripSoundPulse() {
+      let count = 0;
+      const dripInt = setInterval(() => {
+        if (count < 4 && isAudioEnabled) {
+          playChimeSound(980, 0.06);
+          count++;
+        } else {
+          clearInterval(dripInt);
+        }
+      }, 700);
+    }
+
+    // =========================================================================
+    // Master Clock & Timeline Player
+    // =========================================================================
+
+    function startTimelineClock() {
+      clearInterval(videoTimer);
+      videoTimer = setInterval(() => {
+        if (isPlaying) {
+          currentTimeSeconds++;
+          if (currentTimeSeconds > 72) {
+            currentTimeSeconds = 0; // Loop presentation
+          }
+          updateTimelineView();
+        }
+      }, 1000);
+    }
+
+    function updateTimelineView() {
+      // Update Timecode HUD
+      const mins = Math.floor(currentTimeSeconds / 60);
+      const secs = currentTimeSeconds % 60;
+      const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} / 01:10`;
+      document.getElementById("timecodeDisplay").textContent = timeStr;
+
+      // Find Active Scene
+      const scene = STORYBOARD_TIMELINE.find(s => currentTimeSeconds >= s.start && currentTimeSeconds < s.end);
+      if (scene) {
+        document.getElementById("sceneTimePill").textContent = scene.pill;
+        document.getElementById("sceneHeadline").textContent = scene.headline;
+        document.getElementById("sceneSubtext").textContent = scene.subtext;
+
+        if (currentTimeSeconds === scene.start) {
+          scene.setup();
+        }
+      }
+    }
+
+    function togglePlayPause() {
+      isPlaying = !isPlaying;
+      const btn = document.getElementById("playPauseBtn");
+      btn.innerHTML = isPlaying ? `<i class="fa-solid fa-pause"></i>` : `<i class="fa-solid fa-play"></i>`;
+    }
+
+    function restartVideo() {
+      currentTimeSeconds = 0;
+      isPlaying = true;
+      document.getElementById("playPauseBtn").innerHTML = `<i class="fa-solid fa-pause"></i>`;
+      updateTimelineView();
+    }
+
+    function toggleAudio() {
+      isAudioEnabled = !isAudioEnabled;
+      const btn = document.getElementById("audioBtn");
+      btn.innerHTML = isAudioEnabled 
+        ? `<i class="fa-solid fa-volume-high"></i> الصوت: نشط` 
+        : `<i class="fa-solid fa-volume-xmark"></i> الصوت: مكتوم`;
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    // Auto-start on load
+    window.addEventListener("DOMContentLoaded", () => {
+      startTimelineClock();
+      updateTimelineView();
+    });
+  </script>
+</body>
+</html>

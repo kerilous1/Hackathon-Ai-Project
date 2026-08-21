@@ -1,4 +1,4 @@
-# ui
+# pediacare_ai
 
 A new Flutter project.
 

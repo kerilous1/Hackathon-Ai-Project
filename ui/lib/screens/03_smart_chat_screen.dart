@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../theme/app_theme.dart';
 import '../cubit/assessment_cubit.dart';
 import '../cubit/assessment_state.dart';
 import '../models/chat_message_model.dart';
-import '../services/clinical_api_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/respiratory_rate_counter.dart';
 import '04_assessment_result_screen.dart';
 
 class SmartChatScreen extends StatefulWidget {
@@ -16,169 +16,339 @@ class SmartChatScreen extends StatefulWidget {
 }
 
 class _SmartChatScreenState extends State<SmartChatScreen> {
-  final TextEditingController _textController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-  String _selectedDuration = 'من 1 إلى 3 أيام';
-  int _selectedDurationDays = 3;
-  bool _isLoading = false;
+  final _textController = TextEditingController();
+  final _scrollController = ScrollController();
+  String _selectedDuration = '';
+
+  final List<String> _quickSymptoms = [
+    'حرارة وسخونية',
+    'كحة وسعال',
+    'قيء مستمر',
+    'إسهال مائي',
+    'انسحاب الصدر للداخل',
+    'خمول وصعوبة رضاعة',
+  ];
+
+  final List<String> _durations = [
+    'منذ أقل من 24 ساعة',
+    'منذ 1 إلى 3 أيام',
+    'منذ أكثر من 3 أيام',
+  ];
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  void _sendMessage([String? customText]) {
+    final text = (customText ?? _textController.text).trim();
+    if (text.isEmpty) return;
+
+    String fullQuery = text;
+    if (_selectedDuration.isNotEmpty && !text.contains(_selectedDuration)) {
+      fullQuery += ' ($_selectedDuration)';
+    }
+
+    _textController.clear();
+    context.read<AssessmentCubit>().sendMessage(fullQuery);
+    _scrollToBottom();
+  }
+
+  void _openBreathCounter(BuildContext context) {
+    final activeChild = context.read<AssessmentCubit>().state.activeChild;
+    if (activeChild == null) return;
+
+    showDialog(
+      context: context,
+      builder: (_) => RespiratoryRateCounterDialog(
+        child: activeChild,
+        onFinished: (bpm) {
+          _sendMessage('قمت بعد معدل التنفس للطفل: $bpm نفس في الدقيقة.');
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<AssessmentCubit, AssessmentState>(
       listener: (context, state) {
-        if (state.status == AssessmentStatus.loading) {
-          setState(() => _isLoading = true);
-        } else {
-          setState(() => _isLoading = false);
-        }
-        // Show SnackBar for server errors or validation errors
-        if ((state.status == AssessmentStatus.validationError || state.status == AssessmentStatus.failure) &&
-            state.errorMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                state.errorMessage!,
-                style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 13),
-                textAlign: TextAlign.right,
-              ),
-              backgroundColor: const Color(0xFFDC2626),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              duration: const Duration(seconds: 5),
-            ),
-          );
-        }
+        _scrollToBottom();
       },
       builder: (context, state) {
-        final child = state.activeChild;
+        final activeChild = state.activeChild;
+        final messages = state.chatMessages;
 
         return Scaffold(
-          backgroundColor: AppColors.background,
           appBar: AppBar(
-            backgroundColor: Colors.white,
-            elevation: 0.5,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.textPrimary, size: 20),
-              onPressed: () => Navigator.pop(context),
-            ),
             title: Column(
               children: [
                 Text(
-                  '${child.name} - ${child.ageDisplayAr} (${child.weight.toStringAsFixed(0)} كجم)',
-                  style: GoogleFonts.cairo(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
+                  activeChild?.name ?? 'المحادثة الذكية',
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.w800, fontSize: 16),
                 ),
-                Text(
-                  'WHO IMCI Triage Engine',
-                  style: GoogleFonts.cairo(
-                    fontSize: 11,
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
+                if (activeChild != null)
+                  Text(
+                    '${activeChild.ageFormattedArabic} • ${activeChild.weightKg} كجم',
+                    style: GoogleFonts.cairo(fontSize: 11, color: AppColors.textMuted),
                   ),
-                ),
               ],
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.refresh_rounded, color: AppColors.textPrimary),
-                tooltip: 'إعادة ضبط المحادثة',
+                icon: const Icon(Icons.refresh_rounded),
+                tooltip: 'إعادة تعيين المحادثة',
                 onPressed: () {
                   context.read<AssessmentCubit>().resetChat();
                 },
               ),
             ],
           ),
-          body: Stack(
+          body: Column(
             children: [
-              Column(
-                children: [
-                  // Chat Messages Area
-                  Expanded(
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                      itemCount: state.chatMessages.length,
-                      itemBuilder: (context, index) {
-                        final msg = state.chatMessages[index];
-                        return _buildChatBubble(msg);
-                      },
-                    ),
-                  ),
-
-                  // Option Chips for Duration
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    color: Colors.transparent,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildDurationChip('أكثر من 3 أيام', 4),
-                        _buildDurationChip('من 1 إلى 3 أيام', 3),
-                        _buildDurationChip('أقل من 24 ساعة', 1),
-                      ],
-                    ),
-                  ),
-
-                  // Quick Symptom Selector Bar
-                  _buildQuickSymptomBar(child.name),
-
-                  // Text & Voice Input Area
-                  _buildInputBar(child.name),
-                ],
-              ),
-
-              // Fullscreen Loading Overlay during API assessment
-              if (_isLoading)
+              // Offline Indicator Banner if local fallback was used
+              if (state.isOffline)
                 Container(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-                      margin: const EdgeInsets.symmetric(horizontal: 24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 20,
+                  width: double.infinity,
+                  color: AppColors.clinicalAmberBg,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.wifi_off_rounded, size: 14, color: AppColors.clinicalAmberDark),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'وضع المعالجة المحلية السريعة بدون إنترنت (WHO IMCI Local Engine)',
+                          style: GoogleFonts.cairo(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.clinicalAmberDark,
                           ),
-                        ],
+                        ),
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const CircularProgressIndicator(
-                            color: AppColors.primary,
-                            strokeWidth: 3.5,
-                          ),
-                          const SizedBox(height: 18),
-                          Text(
-                            'جاري الاسترجاع والتقييم من دليل WHO IMCI...',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.cairo(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'WHO Integrated Management of Childhood Illness',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.cairo(
-                              fontSize: 11,
-                              color: AppColors.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
                 ),
+
+              // --- LIVE DEMO SHOWCASE SPEED-DIAL BAR ---
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.slateNavy.withOpacity(0.04),
+                  border: const Border(bottom: BorderSide(color: AppColors.borderLight)),
+                ),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.medicalTealDark,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '🌟 سيناريوهات التحكيم المباشر (Demo Presets):',
+                          style: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ActionChip(
+                        avatar: const Icon(Icons.flash_on_rounded, size: 14, color: AppColors.emergencyRed),
+                        label: Text('🔴 رضيع 3 أسابيع (PSBI)', style: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w800)),
+                        backgroundColor: AppColors.emergencyRedBg,
+                        onPressed: () => _sendMessage('3-week-old young infant with breathing rate 66 breaths/min, axillary temperature 35.2°C (hypothermia), and expiratory grunting'),
+                      ),
+                      const SizedBox(width: 6),
+                      ActionChip(
+                        avatar: const Icon(Icons.air_rounded, size: 14, color: AppColors.emergencyRed),
+                        label: Text('🔴 التهاب رئوي وخيم (سحب صدر)', style: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w800)),
+                        backgroundColor: AppColors.emergencyRedBg,
+                        onPressed: () => _sendMessage('طفل 14 شهر يعاني من كحة مع تنفس سريع 48 نفس بالدقيقة وانسحاب أسفل جدار الصدر للداخل'),
+                      ),
+                      const SizedBox(width: 6),
+                      ActionChip(
+                        avatar: const Icon(Icons.health_and_safety_rounded, size: 14, color: AppColors.emergencyRed),
+                        label: Text('🔴 سوء تغذية حاد (Marasmus)', style: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w800)),
+                        backgroundColor: AppColors.emergencyRedBg,
+                        onPressed: () => _sendMessage('طفل 18 شهر يظهر عليه هزال شديد واضح (جلد على عظم) مع تورم بالقدمين'),
+                      ),
+                      const SizedBox(width: 6),
+                      ActionChip(
+                        avatar: const Icon(Icons.water_drop_rounded, size: 14, color: AppColors.emergencyRed),
+                        label: Text('🔴 جفاف شديد (الخطة ج)', style: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w800)),
+                        backgroundColor: AppColors.emergencyRedBg,
+                        onPressed: () => _sendMessage('طفل مصاب بإسهال مائي منذ 3 أيام، فاقد للوعي، عيون غائرة وثنية الجلد ترجع ببطء شديد'),
+                      ),
+                      const SizedBox(width: 6),
+                      ActionChip(
+                        avatar: const Icon(Icons.shield_outlined, size: 14, color: AppColors.slateNavy),
+                        label: Text('🛡️ رفض استشارة بالغين (OOD)', style: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w800)),
+                        backgroundColor: const Color(0xFFF1F5F9),
+                        onPressed: () => _sendMessage('علاج انسداد الشريان التاجي والنيتروجليسرين للبالغين'),
+                      ),
+                      const SizedBox(width: 6),
+                      ActionChip(
+                        avatar: const Icon(Icons.block_rounded, size: 14, color: AppColors.slateNavy),
+                        label: Text('🛡️ رفض كلام عام (Non-Medical)', style: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w800)),
+                        backgroundColor: const Color(0xFFF1F5F9),
+                        onPressed: () => _sendMessage('اي رايك ف لبسي النهاردة؟'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Chat Message Stream
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = messages[index];
+                    return _buildMessageBubble(context, msg);
+                  },
+                ),
+              ),
+
+              // Quick Symptom Chips
+              Container(
+                color: AppColors.surfaceWhite,
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      ActionChip(
+                        avatar: const Icon(Icons.timer_outlined, size: 16, color: AppColors.medicalTeal),
+                        label: Text('عدّ التنفس 🫁', style: GoogleFonts.cairo(fontWeight: FontWeight.w700, fontSize: 12)),
+                        onPressed: () => _openBreathCounter(context),
+                        backgroundColor: AppColors.medicalTeal.withOpacity(0.12),
+                      ),
+                      const SizedBox(width: 8),
+                      ..._quickSymptoms.map((s) => Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: ActionChip(
+                              label: Text(s, style: GoogleFonts.cairo(fontSize: 12)),
+                              onPressed: () => _sendMessage(s),
+                            ),
+                          )),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Duration Selector
+              Container(
+                color: AppColors.surfaceWhite,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Row(
+                  children: [
+                    Text(
+                      'المدة:',
+                      style: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textMuted),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: _durations.map((d) {
+                            final isSel = _selectedDuration == d;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: ChoiceChip(
+                                label: Text(d, style: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w600)),
+                                selected: isSel,
+                                onSelected: (val) => setState(() => _selectedDuration = val ? d : ''),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Input Bar with Voice Dictation simulation button
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceWhite,
+                  border: const Border(top: BorderSide(color: AppColors.borderLight)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: SafeArea(
+                  child: Row(
+                    children: [
+                      IconButton(
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.medicalTeal.withOpacity(0.1),
+                        ),
+                        icon: const Icon(Icons.mic_rounded, color: AppColors.medicalTealDark),
+                        tooltip: 'إملاء صوتي سريري (Voice Dictation)',
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: AppColors.medicalTealDark,
+                              duration: const Duration(seconds: 2),
+                              content: Text(
+                                '🎙️ جاري الاستماع للإملاء الصوتي السريري...',
+                                style: GoogleFonts.cairo(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          );
+                          _sendMessage('طفل يعاني من كحة وتنفس سريع 48 نفس في الدقيقة منذ يومين');
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _textController,
+                          decoration: InputDecoration(
+                            hintText: 'اكتب أعراض الطفل أو علامات الخطورة...',
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          onSubmitted: (_) => _sendMessage(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.medicalTeal,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: const Icon(Icons.send_rounded, color: Colors.white),
+                        onPressed: () => _sendMessage(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         );
@@ -186,255 +356,119 @@ class _SmartChatScreenState extends State<SmartChatScreen> {
     );
   }
 
-  Widget _buildChatBubble(ChatMessageModel msg) {
-    final isAi = msg.sender == 'ai';
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        mainAxisAlignment: isAi ? MainAxisAlignment.start : MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (isAi) ...[
-            Container(
-              width: 38,
-              height: 38,
-              decoration: const BoxDecoration(
-                color: Color(0xFFEDE9FE),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.health_and_safety_rounded,
-                color: AppColors.primary,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 10),
-          ],
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: isAi ? Colors.white : AppColors.primary,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(20),
-                  topRight: const Radius.circular(20),
-                  bottomLeft: Radius.circular(isAi ? 4 : 20),
-                  bottomRight: Radius.circular(isAi ? 20 : 4),
-                ),
-                border: isAi ? Border.all(color: AppColors.cardBorder, width: 1.2) : null,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Text(
-                msg.text,
-                style: GoogleFonts.cairo(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: isAi ? AppColors.textPrimary : Colors.white,
-                  height: 1.4,
-                ),
-              ),
-            ),
+  Widget _buildMessageBubble(BuildContext context, ChatMessageModel msg) {
+    if (msg.isTyping) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.bgLight,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.borderLight),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDurationChip(String title, int days) {
-    final isSelected = _selectedDuration == title;
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedDuration = title;
-          _selectedDurationDays = days;
-        });
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryContainer : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.cardBorder,
-            width: isSelected ? 1.5 : 1.0,
-          ),
-        ),
-        child: Text(
-          title,
-          style: GoogleFonts.cairo(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-            color: isSelected ? AppColors.primary : AppColors.textPrimary,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickSymptomBar(String childName) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      color: Colors.white,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'أعراض سريرية شائعة (اضغط للتقييم الفوري)',
-            style: GoogleFonts.cairo(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textMuted,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              _buildSymptomIconBtn('حرارة وكحة', Icons.thermostat_rounded, const Color(0xFFEF4444)),
-              _buildSymptomIconBtn('صعوبة تنفس', Icons.air_rounded, const Color(0xFF3B82F6)),
-              _buildSymptomIconBtn('قيء مستمر', Icons.sentiment_very_dissatisfied_rounded, const Color(0xFF10B981)),
-              _buildSymptomIconBtn('طفح جلدي', Icons.coronavirus_outlined, const Color(0xFFF59E0B)),
-              _buildSymptomIconBtn('إسهال مائي', Icons.water_drop_outlined, const Color(0xFF8B5CF6)),
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.medicalTeal),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                msg.text,
+                style: GoogleFonts.cairo(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w600),
+              ),
             ],
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      );
+    }
 
-  Widget _buildSymptomIconBtn(String label, IconData icon, Color color) {
-    return InkWell(
-      onTap: () {
-        _triggerAssessment(label);
-      },
-      borderRadius: BorderRadius.circular(14),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: color, size: 22),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.cairo(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    final isUser = msg.isUser;
 
-  Widget _buildInputBar(String childName) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: AppColors.cardBorder, width: 1)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isUser ? AppColors.medicalTeal : AppColors.surfaceWhite,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(18),
+            topRight: const Radius.circular(18),
+            bottomLeft: Radius.circular(isUser ? 18 : 4),
+            bottomRight: Radius.circular(isUser ? 4 : 18),
+          ),
+          border: isUser ? null : Border.all(color: AppColors.borderLight),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF1F5F9),
-                shape: BoxShape.circle,
+            Text(
+              msg.text,
+              style: GoogleFonts.cairo(
+                fontSize: 13,
+                height: 1.5,
+                fontWeight: isUser ? FontWeight.w700 : FontWeight.w600,
+                color: isUser ? Colors.white : AppColors.textMain,
               ),
-              child: const Icon(Icons.mic_rounded, color: AppColors.textSecondary, size: 22),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.cardBorder, width: 1),
-                ),
-                child: TextField(
-                  controller: _textController,
-                  textAlign: TextAlign.right,
-                  decoration: InputDecoration(
-                    hintText: 'اكتب أعراض $childName هنا...',
-                    hintStyle: GoogleFonts.cairo(fontSize: 13, color: AppColors.textMuted),
-                    border: InputBorder.none,
+            const SizedBox(height: 6),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  msg.timestamp,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    color: isUser ? Colors.white70 : AppColors.textLight,
                   ),
-                  onSubmitted: (val) {
-                    if (val.trim().isNotEmpty) {
-                      _triggerAssessment(val.trim());
-                    }
+                ),
+              ],
+            ),
+
+            // If AI message contains assessment result, provide direct Action Button to Screen 04
+            if (!isUser && msg.assessment != null && !msg.assessment!.isRefusal) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.slateNavy,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => AssessmentResultScreen(assessment: msg.assessment!),
+                      ),
+                    );
                   },
+                  icon: const Icon(Icons.analytics_outlined, size: 16),
+                  label: Text(
+                    'عرض نتيجة التقييم والتحقق التفريقي 📊',
+                    style: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w800),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 10),
-            InkWell(
-              onTap: () {
-                final text = _textController.text.trim();
-                if (text.isNotEmpty) {
-                  _triggerAssessment(text);
-                } else {
-                  _triggerAssessment('حرارة وكحة منذ يومين');
-                }
-              },
-              borderRadius: BorderRadius.circular(24),
-              child: Container(
-                width: 46,
-                height: 46,
-                decoration: const BoxDecoration(
-                  color: AppColors.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                ),
-              ),
-            ),
+            ],
           ],
         ),
       ),
     );
-  }
-
-  Future<void> _triggerAssessment(String symptoms) async {
-    final cubit = context.read<AssessmentCubit>();
-    await cubit.sendChatMessage(symptoms);
-    _textController.clear();
-
-    try {
-      await cubit.assessSymptoms(
-        symptoms: symptoms,
-        durationDays: _selectedDurationDays,
-      );
-
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const AssessmentResultScreen()),
-      );
-    } catch (_) {
-      // Errors (ClinicalValidationException, ClinicalApiException) are handled by the BlocConsumer listener SnackBar
-      return;
-    }
   }
 }

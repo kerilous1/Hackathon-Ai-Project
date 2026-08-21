@@ -1,286 +1,224 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../theme/app_theme.dart';
 import '../cubit/assessment_cubit.dart';
 import '../cubit/assessment_state.dart';
+import '../models/assessment_model.dart';
+import '../theme/app_theme.dart';
 import '../widgets/triage_badge.dart';
 import '05_evidence_sources_screen.dart';
 import '06_doctor_summary_screen.dart';
 
 class AssessmentResultScreen extends StatelessWidget {
-  const AssessmentResultScreen({super.key});
+  final AssessmentResponseModel assessment;
+
+  const AssessmentResultScreen({super.key, required this.assessment});
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AssessmentCubit, AssessmentState>(
       builder: (context, state) {
-        final assessment = state.currentAssessment;
-        final triage = assessment?.triageLevel ?? 'YELLOW';
-        final triageLabel = assessment?.triageLabelAr ?? 'يحتاج إلى تقييم طبي';
-        final summaryList = assessment?.summaryFound ?? [];
-        final missingList = assessment?.missingInfo ?? [];
+        // Use live recalculated assessment from Cubit if available, else original passed assessment
+        final currentAsmt = state.currentAssessment ?? assessment;
+        final child = state.activeChild;
 
         return Scaffold(
-          backgroundColor: AppColors.background,
           appBar: AppBar(
-            backgroundColor: Colors.white,
-            elevation: 0.5,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.textPrimary, size: 20),
-              onPressed: () => Navigator.pop(context),
-            ),
-            title: Text(
-              'نتيجة التقييم السريري',
-              style: GoogleFonts.cairo(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
-            ),
+            title: const Text('نتيجة التقييم السريري'),
             actions: [
               IconButton(
-                icon: const Icon(Icons.health_and_safety_rounded, color: AppColors.primary, size: 24),
-                onPressed: () {},
+                icon: const Icon(Icons.share_outlined),
+                tooltip: 'مشاركة ملخص الحالة',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => DoctorSummaryScreen(assessment: currentAsmt),
+                    ),
+                  );
+                },
               ),
             ],
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 1. Triage Summary Card (Large Live Badge)
-                TriageBadge(
-                  triageLevel: triage,
-                  label: triageLabel,
-                  isLarge: true,
-                ),
+          body: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              // Hero Triage Badge Banner
+              TriageBadgeWidget(
+                triageLevel: currentAsmt.triageLevel,
+                label: currentAsmt.detectedLanguage == 'en'
+                    ? currentAsmt.triageLabelEn
+                    : currentAsmt.triageLabelAr,
+              ),
+              const SizedBox(height: 18),
 
-                const SizedBox(height: 18),
-
-                // REFUSAL Layout: Clean gray shield card
-                if (triage == 'REFUSAL') ...[
-                  Container(
-                    padding: const EdgeInsets.all(28),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE2E8F0),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Center(
-                            child: Text('🛡️', style: TextStyle(fontSize: 30)),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'خارج نطاق التقييم',
-                          style: GoogleFonts.cairo(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF475569),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          assessment?.fullRecommendation.isNotEmpty == true
-                              ? assessment!.fullRecommendation
-                              : 'بروتوكول منظمة الصحة العالمية (WHO IMCI) مخصص حصراً للأطفال من عمر يوم حتى 5 سنوات.\n\n'
-                                'الحالة المُدخلة لا تنطبق عليها معايير التقييم السريري الخاصة بالبروتوكول.\n'
-                                'يرجى مراجعة طبيب أطفال مختص لتقييم الحالة.',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.cairo(
-                            fontSize: 14,
-                            height: 1.7,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
-                    ),
+              // Child Header Bar
+              if (child != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceWhite,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.borderLight),
                   ),
-
-                  const SizedBox(height: 28),
-
-                  OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF475569),
-                      side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                    ),
-                    child: Text(
-                      'العودة وتعديل البيانات',
-                      style: GoogleFonts.cairo(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF475569),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.child_care_rounded, size: 20, color: AppColors.medicalTeal),
+                      const SizedBox(width: 8),
+                      Text(
+                        'الطفل: ${child.name} (${child.ageFormattedArabic}، ${child.weightKg} كجم)',
+                        style: GoogleFonts.cairo(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.slateNavy,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ] else ...[
-                  // 2. What We Found Card ("ما الذي وجدناه؟")
-                  _buildCard(
-                    title: 'ما الذي وجدناه ؟',
-                    icon: Icons.checklist_rounded,
-                    iconColor: AppColors.primary,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: summaryList.map((symptom) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
+                ),
+              const SizedBox(height: 18),
+
+              // Section 1: ما الذي وجدناه؟ (Summary Findings)
+              _buildCard(
+                title: 'ما الذي وجدناه؟ 🔎',
+                icon: Icons.checklist_rounded,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ...currentAsmt.summaryFound.map((s) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
                           child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                width: 7,
-                                height: 7,
-                                decoration: const BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
+                              const Icon(Icons.check_circle_outline, size: 16, color: AppColors.medicalTeal),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  symptom,
-                                  style: GoogleFonts.cairo(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textPrimary,
-                                  ),
+                                  s,
+                                  style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w600),
                                 ),
                               ),
                             ],
                           ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-
-                  if (missingList.isNotEmpty) ...[
-                    const SizedBox(height: 18),
-
-                    // 3. Information We Need Card ("معلومات نحتاجها")
-                    _buildCard(
-                      title: 'معلومات نحتاجها للتحقق التفريقي',
-                      icon: Icons.help_outline_rounded,
-                      iconColor: const Color(0xFFE11D48),
-                      child: Column(
-                        children: missingList.map((item) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 22,
-                                  height: 22,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFFEE2E2),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Center(
-                                    child: Text(
-                                      '؟',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFFDC2626),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    item,
-                                    style: GoogleFonts.cairo(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                ),
-                                const Icon(
-                                  Icons.info_outline_rounded,
-                                  size: 18,
-                                  color: AppColors.textMuted,
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
+                        )),
                   ],
+                ),
+              ),
 
-                  const SizedBox(height: 28),
+              const SizedBox(height: 16),
 
-                  // Bottom Primary Action: "عرض التفاصيل والأدلة"
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const EvidenceSourcesScreen()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                      elevation: 4,
-                      shadowColor: AppColors.primary.withValues(alpha: 0.4),
-                    ),
-                    child: Text(
-                      'عرض التفاصيل والأدلة السريرية',
-                      style: GoogleFonts.cairo(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
+              // Section 2: التوصية والإجراءات العاجلة
+              _buildCard(
+                title: 'التوصية السريرية وخطة التدبير 📋',
+                icon: Icons.medical_information_outlined,
+                child: Text(
+                  currentAsmt.fullRecommendation,
+                  style: GoogleFonts.cairo(
+                    fontSize: 13,
+                    height: 1.6,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMain,
                   ),
+                ),
+              ),
 
-                  const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
-                  // Secondary Button: "ملخص للطبيب"
-                  OutlinedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const DoctorSummaryScreen()),
-                      );
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary, width: 1.5),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                    ),
-                    child: Text(
-                      'عرض ملخص للطبيب 🩺',
-                      style: GoogleFonts.cairo(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+              // Section 3: أسئلة التحقق التفريقي اللحظية (0ms Dynamic Recalculation)
+              if (currentAsmt.missingInfo.isNotEmpty)
+                _buildCard(
+                  title: 'معلومات نحتاجها للتحقق التفريقي ❓',
+                  icon: Icons.help_outline_rounded,
+                  headerColor: AppColors.clinicalAmberDark,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'إجابتك على هذه الأسئلة تعيد احتساب درجة الخطورة فورياً (0ms):',
+                        style: GoogleFonts.cairo(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.w600),
                       ),
-                    ),
+                      const SizedBox(height: 10),
+                      ...currentAsmt.missingInfo.map((q) {
+                        final currentAns = currentAsmt.verificationAnswers[q];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.bgLight,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.borderLight),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                q,
+                                style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w700),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ChoiceChip(
+                                      label: Center(
+                                        child: Text('نعم 🔴', style: GoogleFonts.cairo(fontWeight: FontWeight.w700)),
+                                      ),
+                                      selected: currentAns == true,
+                                      onSelected: (val) {
+                                        context.read<AssessmentCubit>().recalculateWithVerification(q, true);
+                                      },
+                                      selectedColor: AppColors.emergencyRedBg,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: ChoiceChip(
+                                      label: Center(
+                                        child: Text('لا 🟢', style: GoogleFonts.cairo(fontWeight: FontWeight.w700)),
+                                      ),
+                                      selected: currentAns == false,
+                                      onSelected: (val) {
+                                        context.read<AssessmentCubit>().recalculateWithVerification(q, false);
+                                      },
+                                      selectedColor: AppColors.safeEmeraldBg,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
                   ),
-                ],
+                ),
 
-                const SizedBox(height: 20),
-              ],
-            ),
+              const SizedBox(height: 24),
+
+              // Navigation Actions
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => EvidenceSourcesScreen(evidenceList: currentAsmt.evidenceList),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.menu_book_rounded),
+                label: const Text('عرض التفاصيل والأدلة السريرية (WHO) 📖'),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => DoctorSummaryScreen(assessment: currentAsmt),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.summarize_rounded),
+                label: const Text('عرض ملخص للطبيب بنظام SBAR 🩺'),
+              ),
+            ],
           ),
         );
       },
@@ -290,18 +228,18 @@ class AssessmentResultScreen extends StatelessWidget {
   Widget _buildCard({
     required String title,
     required IconData icon,
-    required Color iconColor,
     required Widget child,
+    Color? headerColor,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.cardBorder, width: 1.2),
+        color: AppColors.surfaceWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderLight),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -312,19 +250,19 @@ class AssessmentResultScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, color: iconColor, size: 20),
+              Icon(icon, size: 20, color: headerColor ?? AppColors.medicalTeal),
               const SizedBox(width: 8),
               Text(
                 title,
                 style: GoogleFonts.cairo(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
+                  color: headerColor ?? AppColors.slateNavy,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const Divider(height: 20, color: AppColors.borderLight),
           child,
         ],
       ),

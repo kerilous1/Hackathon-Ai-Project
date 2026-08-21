@@ -1,107 +1,199 @@
-/// PEDI-GUIDE AI — API Service
-/// ============================
-/// HTTP client for communicating with the FastAPI backend.
-
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
-import '../models/clinical_model.dart';
+import '../models/child_model.dart';
+import '../models/assessment_model.dart';
+import '../models/evidence_model.dart';
 
 class ApiService {
-  /// Base URL for the FastAPI server.
-  /// - Android emulator: 10.0.2.2 (maps to host localhost)
-  /// - iOS simulator / desktop / web: 127.0.0.1
-  static String get baseUrl {
-    if (kIsWeb) return 'http://127.0.0.1:8000';
-    try {
-      if (Platform.isAndroid) return 'http://10.0.2.2:8000';
-    } catch (_) {}
-    return 'http://127.0.0.1:8000';
+  static final ApiService _instance = ApiService._internal();
+  factory ApiService() => _instance;
+  ApiService._internal();
+
+  // Multi-host candidates for Desktop (127.0.0.1 / localhost) and Android Emulator (10.0.2.2)
+  final List<String> candidateUrls = [
+    'http://127.0.0.1:8000',
+    'http://10.0.2.2:8000',
+    'http://localhost:8000',
+  ];
+
+  String baseUrl = 'http://127.0.0.1:8000';
+  bool _hasResolvedUrl = false;
+
+  Future<String> resolveActiveBaseUrl() async {
+    for (final candidate in candidateUrls) {
+      try {
+        final response = await http
+            .get(Uri.parse('$candidate/api/v1/health'))
+            .timeout(const Duration(milliseconds: 1200));
+        if (response.statusCode == 200) {
+          baseUrl = candidate;
+          _hasResolvedUrl = true;
+          return baseUrl;
+        }
+      } catch (_) {
+        continue;
+      }
+    }
+    return baseUrl;
   }
 
-  /// Override base URL (e.g. from settings).
-  static String? customBaseUrl;
-
-  static String get _effectiveBaseUrl => customBaseUrl ?? baseUrl;
-
-  /// Test connectivity to the backend server.
-  static Future<bool> healthCheck() async {
+  Future<bool> checkHealth() async {
     try {
+      if (!_hasResolvedUrl) {
+        await resolveActiveBaseUrl();
+      }
       final response = await http
-          .get(Uri.parse('$_effectiveBaseUrl/api/health'))
-          .timeout(const Duration(seconds: 5));
+          .get(Uri.parse('$baseUrl/api/v1/health'))
+          .timeout(const Duration(seconds: 3));
       return response.statusCode == 200;
     } catch (_) {
-      return false;
+      // Try resolving one more time
+      final resolved = await resolveActiveBaseUrl();
+      try {
+        final res = await http
+            .get(Uri.parse('$resolved/api/v1/health'))
+            .timeout(const Duration(seconds: 2));
+        return res.statusCode == 200;
+      } catch (_) {
+        return false;
+      }
     }
   }
 
-  /// Send a clinical query and receive a structured result.
-  static Future<ClinicalResult> analyzeCase({
+  Future<AssessmentResponseModel> assessClinicalScenario({
     required String query,
-    String backend = 'chroma',
-    int topK = 4,
-    double threshold = 43.5,
+    required ChildModel child,
+    String language = 'ar',
+    String? customApiKey,
   }) async {
-    final uri = Uri.parse('$_effectiveBaseUrl/api/analyze');
-
-    final body = jsonEncode({
+    final payload = {
       'query': query,
-      'backend': backend,
-      'top_k': topK,
-      'threshold': threshold,
-    });
+      'child_name': child.name,
+      'age_days': child.ageInDays,
+      'age_months': child.ageInMonths,
+      'weight_kg': child.weightKg,
+      'gender': child.gender,
+      'language': language,
+      if (customApiKey != null && customApiKey.isNotEmpty) 'api_key': customApiKey,
+    };
+
+    // Ensure active URL is resolved
+    if (!_hasResolvedUrl) {
+      await resolveActiveBaseUrl();
+    }
+
+    Exception? lastException;
+
+    // Attempt request with current active baseUrl and fallback to candidates if needed
+    final urlsToTry = [baseUrl, ...candidateUrls.where((u) => u != baseUrl)];
+
+    for (final url in urlsToTry) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('$url/api/v1/triage/assess'),
+              headers: {'Content-Type': 'application/json; charset=utf-8'},
+              body: jsonEncode(payload),
+            )
+            .timeout(const Duration(seconds: 20));
+
+        if (response.statusCode == 200) {
+          baseUrl = url;
+          _hasResolvedUrl = true;
+          final data = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+          return AssessmentResponseModel.fromJson(data);
+        } else {
+          lastException = Exception('Server error (${response.statusCode}): ${response.body}');
+        }
+      } catch (e) {
+        lastException = Exception('Failed to connect to $url: $e');
+        continue;
+      }
+    }
+
+    throw lastException ?? Exception('All backend candidate endpoints failed');
+  }
+
+  Future<List<EvidenceModel>> retrieveEvidence(String query, {int topK = 4}) async {
+    final payload = {'query': query, 'top_k': topK};
+    if (!_hasResolvedUrl) {
+      await resolveActiveBaseUrl();
+    }
 
     try {
       final response = await http
           .post(
-            uri,
-            headers: {'Content-Type': 'application/json'},
-            body: body,
+            Uri.parse('$baseUrl/api/v1/triage/retrieve'),
+            headers: {'Content-Type': 'application/json; charset=utf-8'},
+            body: jsonEncode(payload),
           )
-          .timeout(const Duration(seconds: 60));
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final json = jsonDecode(utf8.decode(response.bodyBytes));
-        return ClinicalResult.fromJson(json as Map<String, dynamic>);
-      } else {
-        final detail = _extractDetail(response.body);
-        return ClinicalResult(
-          status: 'error',
-          triageLevel: 'REFUSAL',
-          responseText: 'Server error (${ response.statusCode}): $detail',
-          chunks: [],
-          topScore: 0,
-          confidence: 'LOW',
-          searchQuery: query,
-          citedPages: [],
-          differentialQuestions: [],
-        );
+        final data = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+        final list = data['evidence'] as List<dynamic>? ?? [];
+        return list.map((e) => EvidenceModel.fromJson(e as Map<String, dynamic>)).toList();
       }
-    } catch (e) {
-      return ClinicalResult(
-        status: 'error',
-        triageLevel: 'REFUSAL',
-        responseText: 'Connection failed: $e\n\n'
-            'Make sure the FastAPI server is running:\n'
-            'uvicorn server:app --host 0.0.0.0 --port 8000',
-        chunks: [],
-        topScore: 0,
-        confidence: 'LOW',
-        searchQuery: query,
-        citedPages: [],
-        differentialQuestions: [],
-      );
+    } catch (_) {}
+    return [];
+  }
+
+  Future<Map<String, dynamic>> calculateDosage({
+    required String medication,
+    required double weightKg,
+    double? ageMonths,
+  }) async {
+    final payload = {
+      'medication': medication,
+      'weight_kg': weightKg,
+      if (ageMonths != null) 'age_months': ageMonths,
+    };
+
+    if (!_hasResolvedUrl) {
+      await resolveActiveBaseUrl();
+    }
+
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/api/v1/calculator/dosage'),
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+          body: jsonEncode(payload),
+        )
+        .timeout(const Duration(seconds: 5));
+
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw Exception('Dosage calculator error: ${response.body}');
     }
   }
 
-  static String _extractDetail(String body) {
-    try {
-      final json = jsonDecode(body);
-      return json['detail']?.toString() ?? body;
-    } catch (_) {
-      return body;
+  Future<Map<String, dynamic>> calculateIvFluids({
+    required double weightKg,
+    required double ageMonths,
+  }) async {
+    final payload = {
+      'weight_kg': weightKg,
+      'age_months': ageMonths,
+    };
+
+    if (!_hasResolvedUrl) {
+      await resolveActiveBaseUrl();
+    }
+
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/api/v1/calculator/iv-fluids'),
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+          body: jsonEncode(payload),
+        )
+        .timeout(const Duration(seconds: 5));
+
+    if (response.statusCode == 200) {
+      return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    } else {
+      throw Exception('IV Fluid calculator error: ${response.body}');
     }
   }
 }
